@@ -779,6 +779,14 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
+        /** Lightens [color] toward white by [amount] (0..1). Used to derive a default second gradient stop. */
+        private fun lighten(color: Int, amount: Float): Int {
+            val r = (Color.red(color) + (255 - Color.red(color)) * amount).toInt().coerceIn(0, 255)
+            val g = (Color.green(color) + (255 - Color.green(color)) * amount).toInt().coerceIn(0, 255)
+            val b = (Color.blue(color) + (255 - Color.blue(color)) * amount).toInt().coerceIn(0, 255)
+            return Color.rgb(r, g, b)
+        }
+
         /** Compact color picker dialog with RGB sliders + hex input, using a callback. */
         private fun showSimpleColorPicker(
             ctx: Context, initial: Int, onPicked: (Int) -> Unit
