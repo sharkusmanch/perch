@@ -412,7 +412,25 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             // Bubble digit colors — per-digit picker for H1, H2, :, M1, M2
-            findPreference<Preference>(getString(R.string.pref_key_bubble_digit_colors))?.setOnPreferenceClickListener {
+            val bubbleColorsPref = findPreference<Preference>(getString(R.string.pref_key_bubble_digit_colors))
+            val gradientColorsPref = findPreference<Preference>(getString(R.string.pref_key_gradient_colors))
+
+            // Visibility depends on selected clock style
+            fun updateStyleDependentPrefs() {
+                val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+                bubbleColorsPref?.isVisible = (style == "bubble")
+                gradientColorsPref?.isVisible = (style == "gradient")
+            }
+            updateStyleDependentPrefs()
+
+            findPreference<ListPreference>(getString(R.string.pref_key_clock_style))
+                ?.setOnPreferenceChangeListener { _, _ ->
+                    // Post so the new value is committed before we check it
+                    updateStyleDependentPrefs()
+                    true
+                }
+
+            bubbleColorsPref?.setOnPreferenceClickListener {
                 val ctx = requireContext()
                 val dp = ctx.resources.displayMetrics.density
                 val padding = (16 * dp).toInt()
@@ -480,6 +498,82 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            // Gradient colors — two swatches (start, end)
+            gradientColorsPref?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                val dp = ctx.resources.displayMetrics.density
+                val padding = (16 * dp).toInt()
+
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val defaultHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                val raw = prefs.getString(getString(R.string.pref_key_gradient_colors), null)
+                val colors = if (raw != null) {
+                    try { raw.split(",").map { Color.parseColor(it.trim()) }.toMutableList() } catch (_: Exception) { mutableListOf() }
+                } else mutableListOf()
+                while (colors.size < 2) colors.add(Color.parseColor(defaultHex))
+
+                val root = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(padding, padding, padding, 0)
+                }
+
+                val labels = arrayOf("Start", "End")
+                for (i in 0..1) {
+                    val row = android.widget.LinearLayout(ctx).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            (48 * dp).toInt()
+                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                    }
+                    row.addView(android.widget.TextView(ctx).apply {
+                        text = labels[i]; textSize = 16f
+                        setTextColor(Color.parseColor("#c3c2b7"))
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0.3f
+                        )
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                    })
+                    val swatch = View(ctx).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (40 * dp).toInt(), (40 * dp).toInt()
+                        )
+                        setBackgroundColor(colors[i])
+                        tag = i
+                    }
+                    swatch.setOnClickListener { v ->
+                        val idx = v.tag as Int
+                        showSimpleColorPicker(ctx, colors[idx]) { newColor ->
+                            colors[idx] = newColor
+                            v.setBackgroundColor(newColor)
+                        }
+                    }
+                    row.addView(swatch)
+                    root.addView(row)
+                }
+
+                // Preview gradient
+                val preview = View(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (60 * dp).toInt()
+                    ).also { it.setMargins(0, padding, 0, 0) }
+                    setBackgroundColor(colors[0])
+                }
+                root.addView(preview, root.childCount)
+
+                AlertDialog.Builder(ctx)
+                    .setTitle("Gradient colors")
+                    .setView(root)
+                    .setPositiveButton("OK") { _, _ ->
+                        val hexStr = colors.joinToString(",") { String.format("#%06X", it and 0xFFFFFF) }
+                        prefs.edit().putString(getString(R.string.pref_key_gradient_colors), hexStr).apply()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                    .show()
+                true
+            }
+
             // Font upload picker
             findPreference<Preference>("clock_font_upload")?.setOnPreferenceClickListener {
                 pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
@@ -535,7 +629,8 @@ class SettingsActivity : AppCompatActivity() {
                 "manage_slot_3", "slot_size_3"
             )
             for (key in keys) {
-                findPreference<Preference>(key)?.isEnabled = enabled
+                val pref = findPreference<Preference>(key)
+                if (pref != null) pref.isEnabled = enabled
             }
         }
 
@@ -590,7 +685,7 @@ class SettingsActivity : AppCompatActivity() {
             updatePickPhotosSummary(count)
         }
 
-        /** Compact color picker dialog for a single color (used by bubble digit picker). */
+        /** Compact color picker dialog with RGB sliders + hex input. */
         private fun showSimpleColorPicker(
             ctx: Context, initial: Int, onPicked: (Int) -> Unit
         ) {
@@ -609,7 +704,45 @@ class SettingsActivity : AppCompatActivity() {
             }
             root.addView(preview)
 
-            var r = Color.red(initial); var g = Color.green(initial); var b = Color.blue(initial)
+            // Hex input row
+            val hexRow = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.setMargins(0, 0, 0, padding) }
+            }
+            hexRow.addView(android.widget.TextView(ctx).apply {
+                text = "#"
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                textSize = 16f
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            })
+            val hexInput = android.widget.EditText(ctx).apply {
+                setText(String.format("%06X", initial and 0xFFFFFF))
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                )
+                filters = arrayOf(android.text.InputFilter.LengthFilter(6))
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        val hex = s?.toString()?.trim()?.removePrefix("#") ?: return
+                        if (hex.length != 6) return
+                        val color = try { Color.parseColor("#$hex") } catch (e: Exception) { return }
+                        root.findViewWithTag<android.widget.SeekBar>("R")?.progress = Color.red(color)
+                        root.findViewWithTag<android.widget.SeekBar>("G")?.progress = Color.green(color)
+                        root.findViewWithTag<android.widget.SeekBar>("B")?.progress = Color.blue(color)
+                        preview.setBackgroundColor(color)
+                    }
+                })
+            }
+            hexRow.addView(hexInput)
+            root.addView(hexRow)
 
             fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
                 val row = android.widget.LinearLayout(ctx).apply {
@@ -645,6 +778,7 @@ class SettingsActivity : AppCompatActivity() {
                         val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
                         val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
                         preview.setBackgroundColor(Color.rgb(rv, gv, bv))
+                        if (fromUser) hexInput.setText(String.format("%02X%02X%02X", rv, gv, bv))
                     }
                     override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
                     override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
@@ -653,9 +787,9 @@ class SettingsActivity : AppCompatActivity() {
                 return seek
             }
 
-            addSlider("R", r, "R")
-            addSlider("G", g, "G")
-            addSlider("B", b, "B")
+            addSlider("R", Color.red(initial), "R")
+            addSlider("G", Color.green(initial), "G")
+            addSlider("B", Color.blue(initial), "B")
 
             AlertDialog.Builder(ctx)
                 .setTitle("Pick color")

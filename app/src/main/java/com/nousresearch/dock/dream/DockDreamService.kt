@@ -282,6 +282,8 @@ class DockDreamService : DreamService() {
         try {
             val textColor = Color.parseColor(colorHex)
             clockDisplay.clockColor = textColor
+            dateDisplay.setTextColor(textColor)
+            batteryStatus.setTextColor(textColor)
         } catch (e: Exception) {}
 
         clockDisplay.clockTypeface = when (fontOption) {
@@ -327,6 +329,20 @@ class DockDreamService : DreamService() {
             }
         } else {
             clockDisplay.bubbleDigitColors = null
+        }
+
+        // Gradient style colors — comma-separated start,end hex
+        val gradStr = prefs.getString(getString(R.string.pref_key_gradient_colors), null)
+        if (gradStr != null) {
+            try {
+                val parts = gradStr.split(",").map { Color.parseColor(it.trim()) }
+                if (parts.size >= 2) clockDisplay.gradientColors = Pair(parts[0], parts[1])
+                else clockDisplay.gradientColors = null
+            } catch (_: Exception) {
+                clockDisplay.gradientColors = null
+            }
+        } else {
+            clockDisplay.gradientColors = null
         }
     }
 

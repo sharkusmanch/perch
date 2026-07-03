@@ -92,8 +92,11 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             invalidate()
         }
 
-    /** Per-digit colors for BUBBLY style (5 entries: H1, H2, :, M1, M2). */
+    /** Per-digit colors for BUBBLE style (5 entries: H1, H2, :, M1, M2). */
     var bubbleDigitColors: IntArray? = null
+
+    /** Custom start/end colors for GRADIENT style. When null, uses [clockColor]-derived gradient. */
+    var gradientColors: Pair<Int, Int>? = null
 
     var animEnabled: Boolean = true
 
@@ -409,10 +412,20 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
 
     private fun drawGradient(canvas: Canvas, cx: Float, cy: Float, textY: Float) {
         val band = clockSize * 2f
-        val highlight = if (dimmed) lighten(clockColor, 0.3f) else Color.WHITE
+        val gc = gradientColors
+        val c0: Int
+        val c1: Int
+        if (gc != null) {
+            c0 = gc.first
+            c1 = gc.second
+        } else {
+            val highlight = if (dimmed) lighten(clockColor, 0.3f) else Color.WHITE
+            c0 = clockColor
+            c1 = highlight
+        }
         val shader = LinearGradient(
             0f, 0f, band, 0f,
-            intArrayOf(clockColor, highlight, clockColor),
+            intArrayOf(c0, c1, c0),
             floatArrayOf(0f, 0.5f, 1f),
             Shader.TileMode.MIRROR
         )
