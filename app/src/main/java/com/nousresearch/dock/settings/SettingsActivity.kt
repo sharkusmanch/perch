@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import android.graphics.Color
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
@@ -410,6 +411,76 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
+            // Bubble digit colors — per-digit picker for H1, H2, :, M1, M2
+            findPreference<Preference>(getString(R.string.pref_key_bubble_digit_colors))?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                val dp = ctx.resources.displayMetrics.density
+                val padding = (16 * dp).toInt()
+
+                val labels = arrayOf("H1", "H2", ":", "M1", "M2")
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val raw = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
+                val defaultHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                val colors = if (raw != null) {
+                    try { raw.split(",").map { Color.parseColor(it.trim()) }.toMutableList() } catch (_: Exception) { mutableListOf() }
+                } else mutableListOf()
+                while (colors.size < 5) colors.add(Color.parseColor(defaultHex))
+
+                val root = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(padding, padding, padding, 0)
+                }
+
+                for (i in 0..4) {
+                    val row = android.widget.LinearLayout(ctx).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            (48 * dp).toInt()
+                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                    }
+                    val label = android.widget.TextView(ctx).apply {
+                        text = labels[i]
+                        textSize = 16f
+                        setTextColor(Color.parseColor("#c3c2b7"))
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0.3f
+                        )
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                    }
+                    row.addView(label)
+                    val swatch = View(ctx).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            (40 * dp).toInt(), (40 * dp).toInt()
+                        ).also { it.setMargins(0, 0, 0, 0) }
+                        setBackgroundColor(colors[i])
+                        tag = i
+                    }
+                    swatch.setOnClickListener { v ->
+                        val index = v.tag as Int
+                        showSimpleColorPicker(ctx, colors[index]) { newColor ->
+                            colors[index] = newColor
+                            v.setBackgroundColor(newColor)
+                        }
+                    }
+                    row.addView(swatch)
+                    swatches.add(swatch)
+                    root.addView(row)
+                }
+
+                AlertDialog.Builder(ctx)
+                    .setTitle("Bubble digit colors")
+                    .setView(root)
+                    .setPositiveButton("OK") { _, _ ->
+                        val hexStr = colors.joinToString(",") { String.format("#%06X", it and 0xFFFFFF) }
+                        prefs.edit().putString(getString(R.string.pref_key_bubble_digit_colors), hexStr).apply()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                    .show()
+                true
+            }
+
             // Font upload picker
             findPreference<Preference>("clock_font_upload")?.setOnPreferenceClickListener {
                 pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
@@ -419,9 +490,12 @@ class SettingsActivity : AppCompatActivity() {
             // About — open GitHub repo
             findPreference<Preference>("about_license")?.setOnPreferenceClickListener {
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://${getString(R.string.about_repo)}"))
-                    startActivity(intent)
-                } catch (_: Exception) {}
+                    val url = "https://${getString(R.string.about_repo)}"
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    requireActivity().startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                }
                 true
             }
         }
@@ -454,6 +528,9 @@ class SettingsActivity : AppCompatActivity() {
         private fun updateWidgetPrefsVisibility(enabled: Boolean) {
             val keys = listOf(
                 getString(R.string.pref_key_widget_slot_count),
+                getString(R.string.pref_key_widget_rail_height),
+                getString(R.string.pref_key_widget_show_portrait),
+                getString(R.string.pref_key_widget_show_landscape),
                 "manage_slot_1", "slot_size_1",
                 "manage_slot_2", "slot_size_2",
                 "manage_slot_3", "slot_size_3"
@@ -512,6 +589,86 @@ class SettingsActivity : AppCompatActivity() {
             val uriString = prefs.getString("slideshow_photo_uris", "") ?: ""
             val count = if (uriString.isNotEmpty()) uriString.split("|").size else 0
             updatePickPhotosSummary(count)
+        }
+
+        /** Compact color picker dialog for a single color (used by bubble digit picker). */
+        private fun showSimpleColorPicker(
+            ctx: Context, initial: Int, onPicked: (Int) -> Unit
+        ) {
+            val dp = ctx.resources.displayMetrics.density
+            val padding = (16 * dp).toInt()
+            val root = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(padding, padding, padding, 0)
+            }
+
+            val preview = View(ctx).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (60 * dp).toInt()
+                ).also { it.setMargins(0, 0, 0, padding) }
+                setBackgroundColor(initial)
+            }
+            root.addView(preview)
+
+            var r = Color.red(initial); var g = Color.green(initial); var b = Color.blue(initial)
+
+            fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
+                val row = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                }
+                row.addView(android.widget.TextView(ctx).apply {
+                    text = label; layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (36 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ); textSize = 14f
+                })
+                val seek = android.widget.SeekBar(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    max = 255; progress = initial
+                }
+                row.addView(seek)
+                val valueView = android.widget.TextView(ctx).apply {
+                    text = initial.toString(); layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (36 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ); gravity = android.view.Gravity.END; textSize = 14f
+                }
+                row.addView(valueView)
+                root.addView(row)
+                seek.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(sb: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                        valueView.text = p.toString()
+                        val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                        val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                        val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                        preview.setBackgroundColor(Color.rgb(rv, gv, bv))
+                    }
+                    override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+                    override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+                })
+                seek.tag = tag
+                return seek
+            }
+
+            addSlider("R", r, "R")
+            addSlider("G", g, "G")
+            addSlider("B", b, "B")
+
+            AlertDialog.Builder(ctx)
+                .setTitle("Pick color")
+                .setView(root)
+                .setPositiveButton("OK") { _, _ ->
+                    val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                    val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                    val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                    onPicked(Color.rgb(rv, gv, bv))
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 }

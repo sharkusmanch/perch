@@ -92,6 +92,9 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
             invalidate()
         }
 
+    /** Per-digit colors for BUBBLY style (5 entries: H1, H2, :, M1, M2). */
+    var bubbleDigitColors: IntArray? = null
+
     var animEnabled: Boolean = true
 
     /** 24-hour (HH:mm) vs 12-hour (h:mm) time format. */
@@ -447,6 +450,16 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.strokeWidth = clockSize * 0.11f
         paint.textAlign = Paint.Align.LEFT
 
+        // Per-digit colors override the gradient.
+        val digitCols = bubbleDigitColors
+        if (digitCols != null && digitCols.size >= 5 && is24Hour) {
+            drawBubblePerDigit(canvas, cx, cy, textY, hh, mm, digitCols)
+            paint.textAlign = Paint.Align.CENTER
+            paint.strokeWidth = 0f
+            paint.style = Paint.Style.FILL
+            return
+        }
+
         val hhW = paint.measureText(hh)
         val mmW = paint.measureText(mm)
         val dotR = clockSize * 0.085f
@@ -474,6 +487,56 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.style = Paint.Style.FILL
         paint.strokeWidth = 0f
         paint.textAlign = Paint.Align.CENTER
+    }
+
+    /** Draw each character individually in BUBBLE style with per-digit colors. */
+    private fun drawBubblePerDigit(
+        canvas: Canvas, cx: Float, cy: Float, textY: Float,
+        hh: String, mm: String, cols: IntArray
+    ) {
+        val dotR = clockSize * 0.085f
+        val gap = dotR * 3.4f
+        val hhW = paint.measureText(hh)
+        val mmW = paint.measureText(mm)
+        val totalW = hhW + gap + mmW
+        val startX = cx - totalW / 2f
+
+        // First hour digit
+        val h1 = hh.substring(0, 1)
+        val d1 = shakeOffset(0f, clockSize * 0.06f)
+        paint.color = cols[0]
+        canvas.drawText(h1, startX + d1.first, textY + d1.second, paint)
+
+        // Second hour digit
+        val h2 = hh.substring(1)
+        val h1W = paint.measureText(h1)
+        val d2 = shakeOffset(0.8f, clockSize * 0.06f)
+        paint.color = cols[1]
+        canvas.drawText(h2, startX + h1W + d2.first, textY + d2.second, paint)
+
+        // Colon dots
+        val dotCx = startX + hhW + gap / 2f
+        dotPaint.color = cols[2]
+        val dTop = shakeOffset(1.1f, clockSize * 0.11f)
+        val dBot = shakeOffset(3.7f, clockSize * 0.11f)
+        canvas.drawCircle(dotCx + dTop.first, cy - dotR * 1.5f + dTop.second, dotR, dotPaint)
+        canvas.drawCircle(dotCx + dBot.first, cy + dotR * 1.5f + dBot.second, dotR, dotPaint)
+
+        // First minute digit
+        val m1 = mm.substring(0, 1)
+        val d3 = shakeOffset(2.4f, clockSize * 0.06f)
+        paint.color = cols[3]
+        canvas.drawText(m1, startX + hhW + gap + d3.first, textY + d3.second, paint)
+
+        // Second minute digit
+        val m2 = mm.substring(1)
+        val m1W = paint.measureText(m1)
+        val d4 = shakeOffset(3.2f, clockSize * 0.06f)
+        paint.color = cols[4]
+        canvas.drawText(m2, startX + hhW + gap + m1W + d4.first, textY + d4.second, paint)
+
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = 0f
     }
 
     /**

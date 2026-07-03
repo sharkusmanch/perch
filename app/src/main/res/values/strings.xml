@@ -98,6 +98,9 @@
     <string name="pref_slot_size_small">Small</string>
     <string name="pref_slot_size_medium">Medium (default)</string>
     <string name="pref_slot_size_large">Large</string>
+    <string name="pref_key_bubble_digit_colors">bubble_digit_colors</string>
+    <string name="pref_bubble_digit_colors_title">Bubble digit colors</string>
+    <string name="pref_bubble_digit_colors_summary">Set individual colors for each digit and colon</string>
 
     <!-- Auto-start -->
     <string name="section_autostart">Auto-start</string>
@@ -111,6 +114,10 @@
     <string name="pref_key_widget_rail_height">widget_rail_height</string>
     <string name="pref_widget_rail_height_title">Widget rail height</string>
     <string name="pref_widget_rail_height_summary">Overall height of the widget area in portrait mode</string>
+    <string name="pref_key_widget_show_portrait">widget_show_portrait</string>
+    <string name="pref_widget_show_portrait_title">Show widgets in portrait</string>
+    <string name="pref_key_widget_show_landscape">widget_show_landscape</string>
+    <string name="pref_widget_show_landscape_title">Show widgets in landscape</string>
 
     <!-- Widget strings (Phase 4) -->
     <string name="widget_add">Add widget</string>

@@ -288,7 +288,7 @@ class WidgetHostManager private constructor(
                 layoutParams = lp
                 setBackgroundResource(R.drawable.widget_slot_background)
                 clipToOutline = true
-                visibility = if (isEnabled) View.VISIBLE else View.GONE
+                visibility = if (isEnabled && isOrientationAllowed()) View.VISIBLE else View.GONE
             }
             widgetRail?.addView(slotContainer)
             slotViews[i] = slotContainer
@@ -374,7 +374,18 @@ class WidgetHostManager private constructor(
         }
     }
 
+    /** Whether widgets are allowed in the current orientation. */
+    private fun isOrientationAllowed(): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val key = if (currentIsLandscape) "widget_show_landscape" else "widget_show_portrait"
+        return prefs.getBoolean(key, true)
+    }
+
     private fun showRail() {
+        if (!isOrientationAllowed()) {
+            widgetRail?.visibility = View.GONE
+            return
+        }
         widgetRail?.visibility = View.VISIBLE
         for (i in 0 until slotCount) {
             slotViews[i]?.visibility = View.VISIBLE

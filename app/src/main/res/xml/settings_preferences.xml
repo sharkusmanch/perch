@@ -95,6 +95,11 @@
         android:entryValues="@array/clock_style_values"
         android:defaultValue="default" />
 
+    <Preference
+        android:key="@string/pref_key_bubble_digit_colors"
+        android:title="@string/pref_bubble_digit_colors_title"
+        android:summary="@string/pref_bubble_digit_colors_summary" />
+
     <SwitchPreferenceCompat
         android:key="@string/pref_key_clock_24h"
         android:title="@string/pref_clock_24h_title"
@@ -176,6 +181,18 @@
         android:entries="@array/widget_rail_height_labels"
         android:entryValues="@array/widget_rail_height_values"
         android:defaultValue="medium"
+        android:dependency="@string/pref_key_widgets_enabled" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_widget_show_portrait"
+        android:title="@string/pref_widget_show_portrait_title"
+        android:defaultValue="true"
+        android:dependency="@string/pref_key_widgets_enabled" />
+
+    <SwitchPreferenceCompat
+        android:key="@string/pref_key_widget_show_landscape"
+        android:title="@string/pref_widget_show_landscape_title"
+        android:defaultValue="true"
         android:dependency="@string/pref_key_widgets_enabled" />
 
     <Preference

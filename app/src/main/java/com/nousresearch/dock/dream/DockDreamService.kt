@@ -315,6 +315,19 @@ class DockDreamService : DreamService() {
             "outline" -> AnimatedClockView.ClockStyle.OUTLINE
             else -> AnimatedClockView.ClockStyle.DEFAULT
         }
+
+        // Per-digit bubble colors — comma-separated hex, e.g. "#ff0000,#00ff00,..."
+        val digitColorsStr = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
+        if (digitColorsStr != null) {
+            try {
+                val ints = digitColorsStr.split(",").map { Color.parseColor(it.trim()) }
+                clockDisplay.bubbleDigitColors = ints.toIntArray()
+            } catch (_: Exception) {
+                clockDisplay.bubbleDigitColors = null
+            }
+        } else {
+            clockDisplay.bubbleDigitColors = null
+        }
     }
 
     /**
