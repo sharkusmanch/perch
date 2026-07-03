@@ -465,9 +465,10 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.strokeWidth = clockSize * 0.11f
         paint.textAlign = Paint.Align.LEFT
 
-        // Per-digit colors override the gradient.
+        // Per-digit colors override the gradient. Works in both 12h and 24h
+        // format; drawBubblePerDigit() handles the variable-width 12h hour.
         val digitCols = bubbleDigitColors
-        if (digitCols != null && digitCols.size >= 5 && is24Hour) {
+        if (digitCols != null && digitCols.size >= 5) {
             drawBubblePerDigit(canvas, cx, cy, textY, hh, mm, digitCols)
             paint.textAlign = Paint.Align.CENTER
             paint.strokeWidth = 0f
@@ -504,7 +505,12 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         paint.textAlign = Paint.Align.CENTER
     }
 
-    /** Draw each character individually in BUBBLE style with per-digit colors. */
+    /**
+     * Draw each character individually in BUBBLE style with per-digit colors.
+     * [hh] may be 1 digit (12h format, hours 1-9) or 2 digits (24h format, or
+     * 12h hours 10-12); the single-digit case uses the "ones" digit color (H2)
+     * since there's no tens digit to color separately.
+     */
     private fun drawBubblePerDigit(
         canvas: Canvas, cx: Float, cy: Float, textY: Float,
         hh: String, mm: String, cols: IntArray
@@ -516,18 +522,25 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
         val totalW = hhW + gap + mmW
         val startX = cx - totalW / 2f
 
-        // First hour digit
-        val h1 = hh.substring(0, 1)
-        val d1 = shakeOffset(0f, clockSize * 0.06f)
-        paint.color = cols[0]
-        canvas.drawText(h1, startX + d1.first, textY + d1.second, paint)
+        if (hh.length >= 2) {
+            // First hour digit
+            val h1 = hh.substring(0, 1)
+            val d1 = shakeOffset(0f, clockSize * 0.06f)
+            paint.color = cols[0]
+            canvas.drawText(h1, startX + d1.first, textY + d1.second, paint)
 
-        // Second hour digit
-        val h2 = hh.substring(1)
-        val h1W = paint.measureText(h1)
-        val d2 = shakeOffset(0.8f, clockSize * 0.06f)
-        paint.color = cols[1]
-        canvas.drawText(h2, startX + h1W + d2.first, textY + d2.second, paint)
+            // Second hour digit
+            val h2 = hh.substring(1)
+            val h1W = paint.measureText(h1)
+            val d2 = shakeOffset(0.8f, clockSize * 0.06f)
+            paint.color = cols[1]
+            canvas.drawText(h2, startX + h1W + d2.first, textY + d2.second, paint)
+        } else {
+            // Single-digit 12h hour (1-9): draw with the "ones" digit color.
+            val d2 = shakeOffset(0.8f, clockSize * 0.06f)
+            paint.color = cols[1]
+            canvas.drawText(hh, startX + d2.first, textY + d2.second, paint)
+        }
 
         // Colon dots
         val dotCx = startX + hhW + gap / 2f
