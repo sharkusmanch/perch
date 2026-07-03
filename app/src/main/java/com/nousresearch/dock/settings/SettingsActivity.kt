@@ -464,7 +464,6 @@ class SettingsActivity : AppCompatActivity() {
                         }
                     }
                     row.addView(swatch)
-                    swatches.add(swatch)
                     root.addView(row)
                 }
 
