@@ -278,13 +278,6 @@ class DockDreamService : DreamService() {
             }
         }
 
-        try {
-            val textColor = Color.parseColor(colorHex)
-            clockDisplay.clockColor = textColor
-            dateDisplay.setTextColor(textColor)
-            batteryStatus.setTextColor(textColor)
-        } catch (e: Exception) {}
-
         clockDisplay.clockTypeface = when (fontOption) {
             "serif" -> Typeface.SERIF
             "monospace" -> Typeface.MONOSPACE
@@ -329,6 +322,12 @@ class DockDreamService : DreamService() {
         val colorHex = prefs.getString(styleColorKey, null)
             ?: prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7")
             ?: "#c3c2b7"
+        try {
+            val textColor = Color.parseColor(colorHex)
+            clockDisplay.clockColor = textColor
+            dateDisplay.setTextColor(textColor)
+            batteryStatus.setTextColor(textColor)
+        } catch (e: Exception) {}
 
         // Per-digit bubble colors — comma-separated hex, e.g. "#ff0000,#00ff00,..."
         val digitColorsStr = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
