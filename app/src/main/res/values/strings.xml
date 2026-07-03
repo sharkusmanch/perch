@@ -58,8 +58,15 @@
     <string name="pref_clock_font_size_summary">Adjust the clock text size</string>
     <string name="pref_date_font_size_title">Date size</string>
     <string name="pref_date_font_size_summary">Adjust the date text size</string>
-    <string name="pref_clock_color_title">Clock color</string>
+    <string name="pref_clock_color_title">Theme / color picker</string>
     <string name="pref_clock_color_summary">Set clock and date text color (tap for color picker)</string>
+    <string name="pref_key_clock_color">clock_color</string>
+    <string name="pref_key_clock_color_normal">clock_color_normal</string>
+    <string name="pref_key_clock_color_bubble">clock_color_bubble</string>
+    <string name="pref_key_clock_color_neon">clock_color_neon</string>
+    <string name="pref_key_clock_color_gradient">clock_color_gradient</string>
+    <string name="pref_key_clock_color_mono">clock_color_mono</string>
+    <string name="pref_key_clock_color_outline">clock_color_outline</string>
     <string name="pref_clock_font_title">Clock font</string>
     <string name="pref_clock_font_summary">Select or upload a custom font</string>
     <string name="clock_font_upload">Upload custom font</string>

@@ -83,9 +83,39 @@
         android:summary="@string/pref_clock_font_summary" />
 
     <Preference
-        android:key="@string/pref_key_clock_color"
+        android:key="@string/pref_key_clock_color_normal"
         android:title="@string/pref_clock_color_title"
         android:summary="@string/pref_clock_color_summary" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_bubble"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_neon"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_gradient"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_mono"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_outline"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary"
+        android:visible="false" />
 
     <ListPreference
         android:key="@string/pref_key_clock_style"
@@ -98,12 +128,14 @@
     <Preference
         android:key="@string/pref_key_bubble_digit_colors"
         android:title="@string/pref_bubble_digit_colors_title"
-        android:summary="@string/pref_bubble_digit_colors_summary" />
+        android:summary="@string/pref_bubble_digit_colors_summary"
+        android:visible="false" />
 
     <Preference
         android:key="@string/pref_key_gradient_colors"
         android:title="@string/pref_gradient_colors_title"
-        android:summary="@string/pref_gradient_colors_summary" />
+        android:summary="@string/pref_gradient_colors_summary"
+        android:visible="false" />
 
     <SwitchPreferenceCompat
         android:key="@string/pref_key_clock_24h"
@@ -215,7 +247,10 @@
         android:defaultValue=""
         android:dependency="@string/pref_key_widgets_enabled" />
 
-    <PreferenceCategory android:layout="@layout/preference_category_spacer" />
+    <PreferenceCategory
+        android:key="spacer_after_slot1"
+        android:layout="@layout/preference_category_spacer"
+        android:visible="false" />
 
     <Preference
         android:key="manage_slot_2"
@@ -234,7 +269,10 @@
         android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false" />
 
-    <PreferenceCategory android:layout="@layout/preference_category_spacer" />
+    <PreferenceCategory
+        android:key="spacer_after_slot2"
+        android:layout="@layout/preference_category_spacer"
+        android:visible="false" />
 
     <Preference
         android:key="manage_slot_3"

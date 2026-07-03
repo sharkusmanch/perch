@@ -21,6 +21,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.ListPreference
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
@@ -53,7 +54,13 @@ class SettingsActivity : AppCompatActivity() {
             setOf(
                 getString(R.string.pref_key_clock_style),
                 getString(R.string.pref_key_clock_24h),
-                getString(R.string.pref_key_clock_color),
+                getString(R.string.pref_key_clock_color_normal),
+                getString(R.string.pref_key_clock_color_bubble),
+                getString(R.string.pref_key_clock_color_neon),
+                getString(R.string.pref_key_clock_color_gradient),
+                getString(R.string.pref_key_clock_color_mono),
+                getString(R.string.pref_key_clock_color_outline),
+                getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font_file),
                 getString(R.string.pref_key_oled_mode),
@@ -266,149 +273,31 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Clock color picker — full RGB + hex dialog
-            findPreference<Preference>(getString(R.string.pref_key_clock_color))?.setOnPreferenceClickListener {
-                val ctx = requireContext()
-                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                val currentHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
-                val currentColor = try { Color.parseColor(currentHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
+            // Per-style clock color pickers
+            val styleColorPrefs = mapOf(
+                "default" to getString(R.string.pref_key_clock_color_normal),
+                "bubble" to getString(R.string.pref_key_clock_color_bubble),
+                "neon" to getString(R.string.pref_key_clock_color_neon),
+                "gradient" to getString(R.string.pref_key_clock_color_gradient),
+                "mono" to getString(R.string.pref_key_clock_color_mono),
+                "outline" to getString(R.string.pref_key_clock_color_outline)
+            )
 
-                val dp = ctx.resources.displayMetrics.density
-                val padding = (16 * dp).toInt()
+            // The old clock_color pref is kept for the date/battery fallback, but
+            // each style gets its own color that overrides it. We write to both
+            // so the old key remains the universal fallback.
+            for ((styleKey, prefKey) in styleColorPrefs) {
+                findPreference<Preference>(prefKey)?.setOnPreferenceClickListener {
+                    val ctx = requireContext()
+                    val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                    // Read from the universal fallback, then override for this style
+                    val fallback = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                    val styleHex = prefs.getString(prefKey, fallback) ?: fallback
+                    val currentColor = try { Color.parseColor(styleHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
 
-                // Root vertical layout
-                val root = android.widget.LinearLayout(ctx).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding(padding, padding, padding, 0)
+                    showFullColorPicker(ctx, prefs, prefKey, getString(R.string.pref_key_clock_color), currentColor)
+                    true
                 }
-
-                // Color preview — solid rectangle
-                val preview = View(ctx).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (80 * dp).toInt()
-                    ).also { it.setMargins(0, 0, 0, padding) }
-                    setBackgroundColor(currentColor)
-                }
-                root.addView(preview)
-
-                // Hex input row (created before sliders so seekbar listeners can reference it)
-                val hexRow = android.widget.LinearLayout(ctx).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { it.setMargins(0, 0, 0, 0) }
-                }
-                val hexLabel = android.widget.TextView(ctx).apply {
-                    text = "#"
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    textSize = 16f
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                }
-                hexRow.addView(hexLabel)
-                val hexInput = android.widget.EditText(ctx).apply {
-                    setText(String.format("%06X", currentColor and 0xFFFFFF))
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                    )
-                    filters = arrayOf(android.text.InputFilter.LengthFilter(6))
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                    addTextChangedListener(object : android.text.TextWatcher {
-                        override fun afterTextChanged(s: android.text.Editable?) {}
-                        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                            val hex = s?.toString()?.trim()?.removePrefix("#") ?: return
-                            if (hex.length != 6) return
-                            val color = try { Color.parseColor("#$hex") } catch (e: Exception) { return }
-                            root.findViewWithTag<android.widget.SeekBar>("R")?.progress = Color.red(color)
-                            root.findViewWithTag<android.widget.SeekBar>("G")?.progress = Color.green(color)
-                            root.findViewWithTag<android.widget.SeekBar>("B")?.progress = Color.blue(color)
-                            preview.setBackgroundColor(color)
-                        }
-                    })
-                }
-                hexRow.addView(hexInput)
-                root.addView(hexRow)
-
-                // Helper to build RGB slider row
-                fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
-                    val row = android.widget.LinearLayout(ctx).apply {
-                        orientation = android.widget.LinearLayout.HORIZONTAL
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
-                    }
-                    val labelView = android.widget.TextView(ctx).apply {
-                        text = label
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        textSize = 14f
-                    }
-                    row.addView(labelView)
-                    val seekBar = android.widget.SeekBar(ctx).apply {
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                        )
-                        max = 255
-                        progress = initial
-                    }
-                    row.addView(seekBar)
-                    val valueView = android.widget.TextView(ctx).apply {
-                        text = initial.toString()
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                        )
-                        gravity = android.view.Gravity.END
-                        textSize = 14f
-                    }
-                    row.addView(valueView)
-                    root.addView(row)
-                    seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-                        override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                            valueView.text = progress.toString()
-                            val r = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
-                            val g = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
-                            val b = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
-                            preview.setBackgroundColor(android.graphics.Color.rgb(r, g, b))
-                            if (fromUser) {
-                                hexInput.setText(String.format("%02X%02X%02X", r, g, b))
-                            }
-                        }
-                        override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
-                        override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
-                    })
-                    seekBar.tag = tag
-                    return seekBar
-                }
-
-                val r = Color.red(currentColor)
-                val g = Color.green(currentColor)
-                val b = Color.blue(currentColor)
-
-                addSlider("R", r, "R")
-                addSlider("G", g, "G")
-                addSlider("B", b, "B")
-
-                val dialog = AlertDialog.Builder(ctx)
-                    .setTitle("Clock color")
-                    .setView(root)
-                    .setPositiveButton("OK") { _, _ ->
-                        val hex = try {
-                            val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
-                            val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
-                            val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
-                            String.format("#%02X%02X%02X", rv, gv, bv)
-                        } catch (e: Exception) { "#c3c2b7" }
-                        prefs.edit().putString(getString(R.string.pref_key_clock_color), hex).apply()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .create()
-                dialog.show()
-                true
             }
 
             // Bubble digit colors — per-digit picker for H1, H2, :, M1, M2
@@ -418,6 +307,9 @@ class SettingsActivity : AppCompatActivity() {
             // Visibility depends on selected clock style
             fun updateStyleDependentPrefs() {
                 val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+                for ((sKey, pKey) in styleColorPrefs) {
+                    findPreference<Preference>(pKey)?.isVisible = (sKey == style)
+                }
                 bubbleColorsPref?.isVisible = (style == "bubble")
                 gradientColorsPref?.isVisible = (style == "gradient")
             }
@@ -641,6 +533,8 @@ class SettingsActivity : AppCompatActivity() {
                 val sizePref = findPreference<Preference>("slot_size_$i")
                 sizePref?.isVisible = (i <= count)
             }
+            findPreference<androidx.preference.PreferenceCategory>("spacer_after_slot1")?.isVisible = (count >= 2)
+            findPreference<androidx.preference.PreferenceCategory>("spacer_after_slot2")?.isVisible = (count >= 3)
         }
 
         private fun launchPhotoPicker() {
@@ -685,7 +579,134 @@ class SettingsActivity : AppCompatActivity() {
             updatePickPhotosSummary(count)
         }
 
-        /** Compact color picker dialog with RGB sliders + hex input. */
+        /** Full RGB + hex color picker dialog that writes to [prefKey] and [fallbackKey]. */
+        private fun showFullColorPicker(
+            ctx: Context, prefs: SharedPreferences,
+            prefKey: String, fallbackKey: String, initial: Int
+        ) {
+            val dp = ctx.resources.displayMetrics.density
+            val padding = (16 * dp).toInt()
+            val root = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(padding, padding, padding, 0)
+            }
+
+            val preview = View(ctx).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (80 * dp).toInt()
+                ).also { it.setMargins(0, 0, 0, padding) }
+                setBackgroundColor(initial)
+            }
+            root.addView(preview)
+
+            val hexRow = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.setMargins(0, 0, 0, 0) }
+            }
+            hexRow.addView(android.widget.TextView(ctx).apply {
+                text = "#"
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                textSize = 16f
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            })
+            val hexInput = android.widget.EditText(ctx).apply {
+                setText(String.format("%06X", initial and 0xFFFFFF))
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                )
+                filters = arrayOf(android.text.InputFilter.LengthFilter(6))
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                addTextChangedListener(object : android.text.TextWatcher {
+                    override fun afterTextChanged(s: android.text.Editable?) {}
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        val hex = s?.toString()?.trim()?.removePrefix("#") ?: return
+                        if (hex.length != 6) return
+                        val color = try { Color.parseColor("#$hex") } catch (e: Exception) { return }
+                        root.findViewWithTag<android.widget.SeekBar>("R")?.progress = Color.red(color)
+                        root.findViewWithTag<android.widget.SeekBar>("G")?.progress = Color.green(color)
+                        root.findViewWithTag<android.widget.SeekBar>("B")?.progress = Color.blue(color)
+                        preview.setBackgroundColor(color)
+                    }
+                })
+            }
+            hexRow.addView(hexInput)
+            root.addView(hexRow)
+
+            fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
+                val row = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                }
+                row.addView(android.widget.TextView(ctx).apply {
+                    text = label
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    textSize = 14f
+                })
+                val seekBar = android.widget.SeekBar(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    max = 255; progress = initial
+                }
+                row.addView(seekBar)
+                val valueView = android.widget.TextView(ctx).apply {
+                    text = initial.toString()
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    gravity = android.view.Gravity.END
+                    textSize = 14f
+                }
+                row.addView(valueView)
+                root.addView(row)
+                seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                        valueView.text = progress.toString()
+                        val r = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                        val g = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                        val b = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                        preview.setBackgroundColor(Color.rgb(r, g, b))
+                        if (fromUser) hexInput.setText(String.format("%02X%02X%02X", r, g, b))
+                    }
+                    override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
+                    override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
+                })
+                seekBar.tag = tag
+                return seekBar
+            }
+
+            addSlider("R", Color.red(initial), "R")
+            addSlider("G", Color.green(initial), "G")
+            addSlider("B", Color.blue(initial), "B")
+
+            AlertDialog.Builder(ctx)
+                .setTitle("Clock color")
+                .setView(root)
+                .setPositiveButton("OK") { _, _ ->
+                    val hex = try {
+                        val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
+                        val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
+                        val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
+                        String.format("#%02X%02X%02X", rv, gv, bv)
+                    } catch (e: Exception) { "#c3c2b7" }
+                    prefs.edit().putString(prefKey, hex).putString(fallbackKey, hex).apply()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
+        /** Compact color picker dialog with RGB sliders + hex input, using a callback. */
         private fun showSimpleColorPicker(
             ctx: Context, initial: Int, onPicked: (Int) -> Unit
         ) {

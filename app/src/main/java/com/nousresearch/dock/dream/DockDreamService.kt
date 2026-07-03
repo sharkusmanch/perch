@@ -254,7 +254,6 @@ class DockDreamService : DreamService() {
 
     private fun applyClockCustomization() {
         val clockPercent = prefs.getInt(getString(R.string.pref_key_clock_font_size), 100)
-        val colorHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
         val fontOption = prefs.getString(getString(R.string.pref_key_clock_font), "default") ?: "default"
         val animEnabled = prefs.getBoolean(getString(R.string.pref_key_transition_animation), true)
 
@@ -317,6 +316,19 @@ class DockDreamService : DreamService() {
             "outline" -> AnimatedClockView.ClockStyle.OUTLINE
             else -> AnimatedClockView.ClockStyle.DEFAULT
         }
+
+        // Per-style color. Use the style-specific key; fall back to universal.
+        val styleColorKey = when (style) {
+            "bubble" -> getString(R.string.pref_key_clock_color_bubble)
+            "neon" -> getString(R.string.pref_key_clock_color_neon)
+            "gradient" -> getString(R.string.pref_key_clock_color_gradient)
+            "mono" -> getString(R.string.pref_key_clock_color_mono)
+            "outline" -> getString(R.string.pref_key_clock_color_outline)
+            else -> getString(R.string.pref_key_clock_color_normal)
+        }
+        val colorHex = prefs.getString(styleColorKey, null)
+            ?: prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7")
+            ?: "#c3c2b7"
 
         // Per-digit bubble colors — comma-separated hex, e.g. "#ff0000,#00ff00,..."
         val digitColorsStr = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
