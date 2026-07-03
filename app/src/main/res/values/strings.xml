@@ -48,7 +48,6 @@
     <string name="pref_key_clock_position">clock_position</string>
     <string name="pref_key_clock_font_size">clock_font_size</string>
     <string name="pref_key_date_font_size">date_font_size</string>
-    <string name="pref_key_clock_color">clock_color</string>
     <string name="pref_key_clock_font">clock_font</string>
     <string name="pref_key_clock_font_file">clock_font_file</string>
     <string name="section_clock">Clock</string>
