@@ -281,8 +281,12 @@ class SettingsActivity : AppCompatActivity() {
             val dateColorPref = findPreference<Preference>(getString(R.string.pref_key_date_color))
             val batteryColorPref = findPreference<Preference>(getString(R.string.pref_key_battery_color))
 
-            fun updateStyleDependentPrefs() {
-                val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+            // NOTE: a ListPreference's OnPreferenceChangeListener fires *before* the
+            // new value is persisted to SharedPreferences, so re-reading the pref
+            // here would always see the previous style (off-by-one). We take the
+            // style explicitly instead, defaulting to the persisted value only for
+            // the very first call at screen-creation time.
+            fun updateStyleDependentPrefs(style: String) {
                 normalColorPref?.isVisible = (style == "default")
                 bubbleColorsPref?.isVisible = (style == "bubble")
                 neonColorPref?.isVisible = (style == "neon")
@@ -290,11 +294,13 @@ class SettingsActivity : AppCompatActivity() {
                 monoColorPref?.isVisible = (style == "mono")
                 outlineColorPref?.isVisible = (style == "outline")
             }
-            updateStyleDependentPrefs()
+            updateStyleDependentPrefs(
+                prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+            )
 
             findPreference<ListPreference>(getString(R.string.pref_key_clock_style))
-                ?.setOnPreferenceChangeListener { _, _ ->
-                    updateStyleDependentPrefs()
+                ?.setOnPreferenceChangeListener { _, newValue ->
+                    updateStyleDependentPrefs(newValue as? String ?: "default")
                     true
                 }
 
