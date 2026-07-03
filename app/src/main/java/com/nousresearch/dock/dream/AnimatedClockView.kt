@@ -95,8 +95,8 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     /** Per-digit colors for BUBBLE style (5 entries: H1, H2, :, M1, M2). */
     var bubbleDigitColors: IntArray? = null
 
-    /** Custom start/end colors for GRADIENT style. When null, uses [clockColor]-derived gradient. */
-    var gradientColors: Pair<Int, Int>? = null
+    /** Custom mixture of 2+ colors for GRADIENT style. When null or <2 entries, uses [clockColor]-derived gradient. */
+    var gradientColors: IntArray? = null
 
     var animEnabled: Boolean = true
 
@@ -413,20 +413,22 @@ class AnimatedClockView(context: Context, attrs: AttributeSet?) : View(context, 
     private fun drawGradient(canvas: Canvas, cx: Float, cy: Float, textY: Float) {
         val band = clockSize * 2f
         val gc = gradientColors
-        val c0: Int
-        val c1: Int
-        if (gc != null) {
-            c0 = gc.first
-            c1 = gc.second
+        // Build a palette that mirrors back on itself so the animated phase
+        // shift loops seamlessly, regardless of how many stops are configured.
+        val basePalette: IntArray = if (gc != null && gc.size >= 2) {
+            gc
         } else {
             val highlight = if (dimmed) lighten(clockColor, 0.3f) else Color.WHITE
-            c0 = clockColor
-            c1 = highlight
+            intArrayOf(clockColor, highlight)
         }
+        val mirrored = IntArray(basePalette.size * 2 - 1)
+        for (i in basePalette.indices) mirrored[i] = basePalette[i]
+        for (i in 1 until basePalette.size) mirrored[basePalette.size - 1 + i] = basePalette[basePalette.size - 1 - i]
+        val positions = FloatArray(mirrored.size) { i -> i.toFloat() / (mirrored.size - 1) }
         val shader = LinearGradient(
             0f, 0f, band, 0f,
-            intArrayOf(c0, c1, c0),
-            floatArrayOf(0f, 0.5f, 1f),
+            mirrored,
+            positions,
             Shader.TileMode.MIRROR
         )
         gradientMatrix.reset()

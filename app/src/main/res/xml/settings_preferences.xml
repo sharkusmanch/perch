@@ -82,11 +82,6 @@
         android:title="@string/clock_font_upload"
         android:summary="@string/pref_clock_font_summary" />
 
-    <Preference
-        android:key="@string/pref_key_clock_color"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary" />
-
     <ListPreference
         android:key="@string/pref_key_clock_style"
         android:title="@string/pref_clock_style_title"
@@ -96,15 +91,38 @@
         android:defaultValue="default" />
 
     <Preference
-        android:key="@string/pref_key_bubble_digit_colors"
-        android:title="@string/pref_bubble_digit_colors_title"
-        android:summary="@string/pref_bubble_digit_colors_summary"
+        android:key="@string/pref_key_clock_color_normal"
+        android:title="@string/pref_clock_color_title"
+        android:summary="@string/pref_clock_color_summary" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_bubble"
+        android:title="@string/pref_bubble_color_title"
+        android:summary="@string/pref_bubble_color_summary"
         android:visible="false" />
 
     <Preference
-        android:key="@string/pref_key_gradient_colors"
-        android:title="@string/pref_gradient_colors_title"
-        android:summary="@string/pref_gradient_colors_summary"
+        android:key="@string/pref_key_clock_color_neon"
+        android:title="@string/pref_neon_color_title"
+        android:summary="@string/pref_neon_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_gradient"
+        android:title="@string/pref_gradient_color_title"
+        android:summary="@string/pref_gradient_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_mono"
+        android:title="@string/pref_mono_color_title"
+        android:summary="@string/pref_mono_color_summary"
+        android:visible="false" />
+
+    <Preference
+        android:key="@string/pref_key_clock_color_outline"
+        android:title="@string/pref_outline_color_title"
+        android:summary="@string/pref_outline_color_summary"
         android:visible="false" />
 
     <SwitchPreferenceCompat
@@ -125,11 +143,21 @@
         android:summary="@string/pref_show_date_summary"
         android:defaultValue="true" />
 
+    <Preference
+        android:key="@string/pref_key_date_color"
+        android:title="@string/pref_date_color_title"
+        android:summary="@string/pref_date_color_summary" />
+
     <SwitchPreferenceCompat
         android:key="@string/pref_key_battery_enabled"
         android:title="@string/pref_battery_title"
         android:summary="@string/pref_battery_summary"
         android:defaultValue="true" />
+
+    <Preference
+        android:key="@string/pref_key_battery_color"
+        android:title="@string/pref_battery_color_title"
+        android:summary="@string/pref_battery_color_summary" />
 
     <SeekBarPreference
         android:key="@string/pref_key_battery_font_size"

@@ -323,14 +323,19 @@ class DockDreamService : DreamService() {
             ?: prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7")
             ?: "#c3c2b7"
         try {
-            val textColor = Color.parseColor(colorHex)
-            clockDisplay.clockColor = textColor
-            dateDisplay.setTextColor(textColor)
-            batteryStatus.setTextColor(textColor)
+            clockDisplay.clockColor = Color.parseColor(colorHex)
         } catch (e: Exception) {}
 
+        // Date and battery each have their own independent color, falling back
+        // to the clock's color (not the other way around) when unset.
+        val dateHex = prefs.getString(getString(R.string.pref_key_date_color), null) ?: colorHex
+        try { dateDisplay.setTextColor(Color.parseColor(dateHex)) } catch (e: Exception) {}
+
+        val batteryHex = prefs.getString(getString(R.string.pref_key_battery_color), null) ?: colorHex
+        try { batteryStatus.setTextColor(Color.parseColor(batteryHex)) } catch (e: Exception) {}
+
         // Per-digit bubble colors — comma-separated hex, e.g. "#ff0000,#00ff00,..."
-        val digitColorsStr = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
+        val digitColorsStr = prefs.getString(getString(R.string.pref_key_clock_color_bubble), null)
         if (digitColorsStr != null) {
             try {
                 val ints = digitColorsStr.split(",").map { Color.parseColor(it.trim()) }
@@ -342,13 +347,12 @@ class DockDreamService : DreamService() {
             clockDisplay.bubbleDigitColors = null
         }
 
-        // Gradient style colors — comma-separated start,end hex
-        val gradStr = prefs.getString(getString(R.string.pref_key_gradient_colors), null)
+        // Gradient style colors — comma-separated hex list of 2+ colors
+        val gradStr = prefs.getString(getString(R.string.pref_key_clock_color_gradient), null)
         if (gradStr != null) {
             try {
                 val parts = gradStr.split(",").map { Color.parseColor(it.trim()) }
-                if (parts.size >= 2) clockDisplay.gradientColors = Pair(parts[0], parts[1])
-                else clockDisplay.gradientColors = null
+                clockDisplay.gradientColors = if (parts.size >= 2) parts.toIntArray() else null
             } catch (_: Exception) {
                 clockDisplay.gradientColors = null
             }

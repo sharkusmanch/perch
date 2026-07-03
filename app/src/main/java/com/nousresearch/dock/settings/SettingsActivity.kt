@@ -12,6 +12,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.graphics.Rect
 import android.view.View
 import android.widget.Toast
 import android.graphics.Color
@@ -25,6 +26,7 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.SwitchPreferenceCompat
+import androidx.recyclerview.widget.RecyclerView
 import com.nousresearch.dock.R
 import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
@@ -61,6 +63,7 @@ class SettingsActivity : AppCompatActivity() {
                 getString(R.string.pref_key_clock_color_mono),
                 getString(R.string.pref_key_clock_color_outline),
                 getString(R.string.pref_key_clock_color),
+                getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font_file),
                 getString(R.string.pref_key_oled_mode),
@@ -156,6 +159,29 @@ class SettingsActivity : AppCompatActivity() {
                 pendingWidgetId = -1
                 pendingWidgetProvider = null
             }
+
+        // Ensures at least 10dp of breathing room between every preference row
+        // (name/icon + summary) and the next, most noticeably in the Widgets
+        // section where users pick/manage widgets per slot.
+        override fun onCreateRecyclerView(
+            inflater: android.view.LayoutInflater,
+            parent: android.view.ViewGroup,
+            savedInstanceState: Bundle?
+        ): RecyclerView {
+            val recyclerView = super.onCreateRecyclerView(inflater, parent, savedInstanceState)
+            val minGapPx = (10 * resources.displayMetrics.density).toInt()
+            recyclerView.addItemDecoration(object : RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(
+                    outRect: Rect,
+                    view: View,
+                    parent: RecyclerView,
+                    state: RecyclerView.State
+                ) {
+                    outRect.bottom = minGapPx
+                }
+            })
+            return recyclerView
+        }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.settings_preferences, rootKey)
@@ -273,48 +299,55 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Single clock color picker — reads/writes the key matching the current style.
-            // Each style stores its own color (clock_color_normal, clock_color_bubble, etc.)
-            // and the universal clock_color key is kept as fallback for date/battery.
-            findPreference<Preference>(getString(R.string.pref_key_clock_color))?.setOnPreferenceClickListener {
-                val ctx = requireContext()
-                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
-                val styleKey = when (style) {
-                    "bubble" -> getString(R.string.pref_key_clock_color_bubble)
-                    "neon" -> getString(R.string.pref_key_clock_color_neon)
-                    "gradient" -> getString(R.string.pref_key_clock_color_gradient)
-                    "mono" -> getString(R.string.pref_key_clock_color_mono)
-                    "outline" -> getString(R.string.pref_key_clock_color_outline)
-                    else -> getString(R.string.pref_key_clock_color_normal)
-                }
-                val fallback = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
-                val styleHex = prefs.getString(styleKey, fallback) ?: fallback
-                val currentColor = try { Color.parseColor(styleHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
+            // Per-style color pickers — each style has its own visible pref.
+            val normalColorPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_normal))
+            val bubbleColorsPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_bubble))
+            val neonColorPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_neon))
+            val gradientColorsPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_gradient))
+            val monoColorPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_mono))
+            val outlineColorPref = findPreference<Preference>(getString(R.string.pref_key_clock_color_outline))
+            val dateColorPref = findPreference<Preference>(getString(R.string.pref_key_date_color))
+            val batteryColorPref = findPreference<Preference>(getString(R.string.pref_key_battery_color))
 
-                showFullColorPicker(ctx, prefs, styleKey, getString(R.string.pref_key_clock_color), currentColor)
-                true
-            }
-
-            // Bubble digit colors — per-digit picker for H1, H2, :, M1, M2
-            val bubbleColorsPref = findPreference<Preference>(getString(R.string.pref_key_bubble_digit_colors))
-            val gradientColorsPref = findPreference<Preference>(getString(R.string.pref_key_gradient_colors))
-
-            // Visibility depends on selected clock style
             fun updateStyleDependentPrefs() {
                 val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+                normalColorPref?.isVisible = (style == "default")
                 bubbleColorsPref?.isVisible = (style == "bubble")
+                neonColorPref?.isVisible = (style == "neon")
                 gradientColorsPref?.isVisible = (style == "gradient")
+                monoColorPref?.isVisible = (style == "mono")
+                outlineColorPref?.isVisible = (style == "outline")
             }
             updateStyleDependentPrefs()
 
             findPreference<ListPreference>(getString(R.string.pref_key_clock_style))
                 ?.setOnPreferenceChangeListener { _, _ ->
-                    // Post so the new value is committed before we check it
                     updateStyleDependentPrefs()
                     true
                 }
 
+            // Normal / Neon / Mono / Outline — standard single-color picker with hex input.
+            val styleKeys = listOf(
+                getString(R.string.pref_key_clock_color_normal) to normalColorPref,
+                getString(R.string.pref_key_clock_color_neon) to neonColorPref,
+                getString(R.string.pref_key_clock_color_mono) to monoColorPref,
+                getString(R.string.pref_key_clock_color_outline) to outlineColorPref,
+                getString(R.string.pref_key_date_color) to dateColorPref,
+                getString(R.string.pref_key_battery_color) to batteryColorPref
+            )
+            for ((key, pref) in styleKeys) {
+                pref?.setOnPreferenceClickListener {
+                    val ctx = requireContext()
+                    val p = PreferenceManager.getDefaultSharedPreferences(ctx)
+                    val fallback = p.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                    val curHex = p.getString(key, fallback) ?: fallback
+                    val curColor = try { Color.parseColor(curHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
+                    showFullColorPicker(ctx, p, key, getString(R.string.pref_key_clock_color), curColor)
+                    true
+                }
+            }
+
+            // Bubble — per-digit color picker for H1, H2, :, M1, M2 with hex input per swatch
             bubbleColorsPref?.setOnPreferenceClickListener {
                 val ctx = requireContext()
                 val dp = ctx.resources.displayMetrics.density
@@ -322,7 +355,7 @@ class SettingsActivity : AppCompatActivity() {
 
                 val labels = arrayOf("H1", "H2", ":", "M1", "M2")
                 val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                val raw = prefs.getString(getString(R.string.pref_key_bubble_digit_colors), null)
+                val raw = prefs.getString(getString(R.string.pref_key_clock_color_bubble), null)
                 val defaultHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
                 val colors = if (raw != null) {
                     try { raw.split(",").map { Color.parseColor(it.trim()) }.toMutableList() } catch (_: Exception) { mutableListOf() }
@@ -342,75 +375,6 @@ class SettingsActivity : AppCompatActivity() {
                             (48 * dp).toInt()
                         ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
                     }
-                    val label = android.widget.TextView(ctx).apply {
-                        text = labels[i]
-                        textSize = 16f
-                        setTextColor(Color.parseColor("#c3c2b7"))
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0.3f
-                        )
-                        gravity = android.view.Gravity.CENTER_VERTICAL
-                    }
-                    row.addView(label)
-                    val swatch = View(ctx).apply {
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            (40 * dp).toInt(), (40 * dp).toInt()
-                        ).also { it.setMargins(0, 0, 0, 0) }
-                        setBackgroundColor(colors[i])
-                        tag = i
-                    }
-                    swatch.setOnClickListener { v ->
-                        val index = v.tag as Int
-                        showSimpleColorPicker(ctx, colors[index]) { newColor ->
-                            colors[index] = newColor
-                            v.setBackgroundColor(newColor)
-                        }
-                    }
-                    row.addView(swatch)
-                    root.addView(row)
-                }
-
-                AlertDialog.Builder(ctx)
-                    .setTitle("Bubble digit colors")
-                    .setView(root)
-                    .setPositiveButton("OK") { _, _ ->
-                        val hexStr = colors.joinToString(",") { String.format("#%06X", it and 0xFFFFFF) }
-                        prefs.edit().putString(getString(R.string.pref_key_bubble_digit_colors), hexStr).apply()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .create()
-                    .show()
-                true
-            }
-
-            // Gradient colors — two swatches (start, end)
-            gradientColorsPref?.setOnPreferenceClickListener {
-                val ctx = requireContext()
-                val dp = ctx.resources.displayMetrics.density
-                val padding = (16 * dp).toInt()
-
-                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                val defaultHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
-                val raw = prefs.getString(getString(R.string.pref_key_gradient_colors), null)
-                val colors = if (raw != null) {
-                    try { raw.split(",").map { Color.parseColor(it.trim()) }.toMutableList() } catch (_: Exception) { mutableListOf() }
-                } else mutableListOf()
-                while (colors.size < 2) colors.add(Color.parseColor(defaultHex))
-
-                val root = android.widget.LinearLayout(ctx).apply {
-                    orientation = android.widget.LinearLayout.VERTICAL
-                    setPadding(padding, padding, padding, 0)
-                }
-
-                val labels = arrayOf("Start", "End")
-                for (i in 0..1) {
-                    val row = android.widget.LinearLayout(ctx).apply {
-                        orientation = android.widget.LinearLayout.HORIZONTAL
-                        layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            (48 * dp).toInt()
-                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
-                    }
                     row.addView(android.widget.TextView(ctx).apply {
                         text = labels[i]; textSize = 16f
                         setTextColor(Color.parseColor("#c3c2b7"))
@@ -423,8 +387,7 @@ class SettingsActivity : AppCompatActivity() {
                         layoutParams = android.widget.LinearLayout.LayoutParams(
                             (40 * dp).toInt(), (40 * dp).toInt()
                         )
-                        setBackgroundColor(colors[i])
-                        tag = i
+                        setBackgroundColor(colors[i]); tag = i
                     }
                     swatch.setOnClickListener { v ->
                         val idx = v.tag as Int
@@ -433,25 +396,15 @@ class SettingsActivity : AppCompatActivity() {
                             v.setBackgroundColor(newColor)
                         }
                     }
-                    row.addView(swatch)
-                    root.addView(row)
+                    row.addView(swatch); root.addView(row)
                 }
-
-                // Preview gradient
-                val preview = View(ctx).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (60 * dp).toInt()
-                    ).also { it.setMargins(0, padding, 0, 0) }
-                    setBackgroundColor(colors[0])
-                }
-                root.addView(preview, root.childCount)
 
                 AlertDialog.Builder(ctx)
-                    .setTitle("Gradient colors")
+                    .setTitle("Bubble digit colors")
                     .setView(root)
                     .setPositiveButton("OK") { _, _ ->
                         val hexStr = colors.joinToString(",") { String.format("#%06X", it and 0xFFFFFF) }
-                        prefs.edit().putString(getString(R.string.pref_key_gradient_colors), hexStr).apply()
+                        prefs.edit().putString(getString(R.string.pref_key_clock_color_bubble), hexStr).apply()
                     }
                     .setNegativeButton("Cancel", null)
                     .create()
@@ -459,7 +412,134 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Font upload picker
+            // Gradient — multi-color picker (add/remove colors, live preview)
+            gradientColorsPref?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                val dp = ctx.resources.displayMetrics.density
+                val padding = (16 * dp).toInt()
+
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val defaultHex = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                val raw = prefs.getString(getString(R.string.pref_key_clock_color_gradient), null)
+                val colors = if (raw != null) {
+                    try { raw.split(",").map { Color.parseColor(it.trim()) }.toMutableList() } catch (_: Exception) { mutableListOf() }
+                } else mutableListOf()
+                if (colors.isEmpty()) { colors.add(Color.parseColor(defaultHex)); colors.add(lighten(Color.parseColor(defaultHex), 0.6f)) }
+
+                val root = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    setPadding(padding, padding, padding, 0)
+                }
+
+                // Preview gradient bar
+                val preview = View(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (60 * dp).toInt()
+                    ).also { it.setMargins(0, 0, 0, padding) }
+                }
+                root.addView(preview)
+
+                // Color list
+                val colorsContainer = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                }
+                root.addView(colorsContainer)
+
+                fun refreshGradientPreview() {
+                    if (colors.size >= 2) {
+                        val shader = android.graphics.LinearGradient(
+                            0f, 0f, (300 * dp).toFloat(), 0f,
+                            colors.toIntArray(), null, android.graphics.Shader.TileMode.CLAMP
+                        )
+                        val bg = android.graphics.drawable.PaintDrawable().apply { paint.shader = shader }
+                        preview.background = bg
+                    } else if (colors.size == 1) {
+                        preview.setBackgroundColor(colors[0])
+                    }
+                }
+
+                fun rebuildColorList() {
+                    colorsContainer.removeAllViews()
+                    for (i in colors.indices) {
+                        val row = android.widget.LinearLayout(ctx).apply {
+                            orientation = android.widget.LinearLayout.HORIZONTAL
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                                (48 * dp).toInt()
+                            ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                        }
+                        val swatch = View(ctx).apply {
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                (40 * dp).toInt(), (40 * dp).toInt()
+                            )
+                            setBackgroundColor(colors[i]); tag = i
+                        }
+                        swatch.setOnClickListener { v ->
+                            val idx = v.tag as Int
+                            showSimpleColorPicker(ctx, colors[idx]) { newColor ->
+                                colors[idx] = newColor
+                                v.setBackgroundColor(newColor)
+                                refreshGradientPreview()
+                            }
+                        }
+                        row.addView(swatch)
+                        row.addView(android.widget.TextView(ctx).apply {
+                            text = "Color ${i + 1}"
+                            layoutParams = android.widget.LinearLayout.LayoutParams(
+                                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                            ).also { it.setMargins((12 * dp).toInt(), 0, 0, 0) }
+                            textSize = 14f; gravity = android.view.Gravity.CENTER_VERTICAL
+                        })
+                        if (colors.size > 2) {
+                            val removeBtn = android.widget.Button(ctx).apply {
+                                text = "X"
+                                layoutParams = android.widget.LinearLayout.LayoutParams(
+                                    (48 * dp).toInt(), android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+                                )
+                                setOnClickListener { colors.removeAt(i); rebuildColorList(); refreshGradientPreview() }
+                            }
+                            row.addView(removeBtn)
+                        }
+                        colorsContainer.addView(row)
+                    }
+                    // Add color button
+                    val addRow = android.widget.LinearLayout(ctx).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            (48 * dp).toInt()
+                        ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
+                    }
+                    val addBtn = android.widget.Button(ctx).apply {
+                        text = "+ Add color"
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+                        )
+                        setOnClickListener {
+                            colors.add(Color.parseColor(defaultHex))
+                            rebuildColorList()
+                            refreshGradientPreview()
+                        }
+                    }
+                    addRow.addView(addBtn)
+                    colorsContainer.addView(addRow)
+                }
+
+                rebuildColorList()
+                refreshGradientPreview()
+
+                AlertDialog.Builder(ctx)
+                    .setTitle("Gradient colors")
+                    .setView(root)
+                    .setPositiveButton("OK") { _, _ ->
+                        val hexStr = colors.joinToString(",") { String.format("#%06X", it and 0xFFFFFF) }
+                        prefs.edit().putString(getString(R.string.pref_key_clock_color_gradient), hexStr).apply()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+                    .show()
+                true
+            }            // Font upload picker
             findPreference<Preference>("clock_font_upload")?.setOnPreferenceClickListener {
                 pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
                 true
