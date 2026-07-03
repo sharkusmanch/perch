@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <resources>
     <string name="app_name">Dock</string>
     <string name="settings_title">Dock Settings</string>
@@ -17,20 +17,30 @@
     <!-- Display section -->
     <string name="section_display">Display</string>
     <string name="pref_brightness_title">Brightness override</string>
-    <string name="pref_brightness_summary">Dim the display during screensaver</string>
+    <string
+        name="pref_brightness_summary"
+    >Dim the display during screensaver</string>
     <string name="pref_oled_title">OLED pure-black background</string>
-    <string name="pref_oled_summary">Use true black (#000000) instead of warm dark</string>
+    <string
+        name="pref_oled_summary"
+    >Use true black (#000000) instead of warm dark</string>
     <string name="pref_night_dim_title">Night auto-dim</string>
-    <string name="pref_night_dim_summary">Automatically dim and tint accent at night</string>
+    <string
+        name="pref_night_dim_summary"
+    >Automatically dim and tint accent at night</string>
     <string name="pref_night_dim_start_title">Night start</string>
-    <string name="pref_night_dim_start_summary">When to start night mode</string>
+    <string
+        name="pref_night_dim_start_summary"
+    >When to start night mode</string>
     <string name="pref_night_dim_end_title">Night end</string>
     <string name="pref_night_dim_end_summary">When to end night mode</string>
 
     <!-- Slideshow section -->
     <string name="section_slideshow">Photo Slideshow</string>
     <string name="pref_slideshow_title">Enable slideshow</string>
-    <string name="pref_slideshow_summary">Show photos as ambient background while charging</string>
+    <string
+        name="pref_slideshow_summary"
+    >Show photos as ambient background while charging</string>
     <string name="slideshow_interval">Interval</string>
     <string name="slideshow_pick_photos">Pick photos</string>
     <string name="slideshow_no_photos">No photos selected</string>
@@ -39,10 +49,14 @@
     <!-- Widgets section -->
     <string name="section_widgets">Widgets</string>
     <string name="pref_widgets_title">Enable widgets</string>
-    <string name="pref_widgets_summary">Show 1–3 hosted Android widgets alongside the clock</string>
+    <string
+        name="pref_widgets_summary"
+    >Show 1–3 hosted Android widgets alongside the clock</string>
     <string name="widget_slot_count">Number of slots</string>
     <string name="widget_manage_slot">Manage slot</string>
     <string name="widget_pick_for_slot">Tap to pick a widget</string>
+    <string name="widget_picker_title">Choose widget</string>
+    <string name="widget_picker_empty">No widgets available</string>
 
     <!-- Clock customization -->
     <string name="pref_key_clock_position">clock_position</string>
@@ -52,13 +66,21 @@
     <string name="pref_key_clock_font_file">clock_font_file</string>
     <string name="section_clock">Clock</string>
     <string name="pref_clock_position_title">Clock position</string>
-    <string name="pref_clock_position_summary">Horizontal position of the clock in landscape</string>
+    <string
+        name="pref_clock_position_summary"
+    >Horizontal position of the clock in landscape</string>
     <string name="pref_clock_font_size_title">Clock size</string>
-    <string name="pref_clock_font_size_summary">Adjust the clock text size</string>
+    <string
+        name="pref_clock_font_size_summary"
+    >Adjust the clock text size</string>
     <string name="pref_date_font_size_title">Date size</string>
-    <string name="pref_date_font_size_summary">Adjust the date text size</string>
+    <string
+        name="pref_date_font_size_summary"
+    >Adjust the date text size</string>
     <string name="pref_clock_color_title">Normal color</string>
-    <string name="pref_clock_color_summary">Color for normal clock style</string>
+    <string
+        name="pref_clock_color_summary"
+    >Color for normal clock style</string>
     <string name="pref_key_clock_color">clock_color</string>
     <string name="pref_key_clock_color_normal">clock_color_normal</string>
     <string name="pref_key_clock_color_bubble">clock_color_bubble</string>
@@ -67,23 +89,33 @@
     <string name="pref_key_clock_color_mono">clock_color_mono</string>
     <string name="pref_key_clock_color_outline">clock_color_outline</string>
     <string name="pref_bubble_color_title">Bubble colors</string>
-    <string name="pref_bubble_color_summary">Set colors for each digit and colon</string>
+    <string
+        name="pref_bubble_color_summary"
+    >Set colors for each digit and colon</string>
     <string name="pref_gradient_color_title">Gradient colors</string>
-    <string name="pref_gradient_color_summary">Set two or more colors for gradient</string>
+    <string
+        name="pref_gradient_color_summary"
+    >Set two or more colors for gradient</string>
     <string name="pref_neon_color_title">Neon color</string>
     <string name="pref_neon_color_summary">Color for neon clock style</string>
     <string name="pref_mono_color_title">Mono color</string>
     <string name="pref_mono_color_summary">Color for mono clock style</string>
     <string name="pref_outline_color_title">Outline color</string>
-    <string name="pref_outline_color_summary">Color for outline clock style</string>
+    <string
+        name="pref_outline_color_summary"
+    >Color for outline clock style</string>
     <string name="pref_key_date_color">date_color</string>
     <string name="pref_date_color_title">Date color</string>
     <string name="pref_date_color_summary">Set the date text color</string>
     <string name="pref_key_battery_color">battery_color</string>
     <string name="pref_battery_color_title">Battery color</string>
-    <string name="pref_battery_color_summary">Set the battery text color</string>
+    <string
+        name="pref_battery_color_summary"
+    >Set the battery text color</string>
     <string name="pref_clock_font_title">Clock font</string>
-    <string name="pref_clock_font_summary">Select or upload a custom font</string>
+    <string
+        name="pref_clock_font_summary"
+    >Select or upload a custom font</string>
     <string name="clock_font_upload">Upload custom font</string>
     <string name="clock_font_default">Default</string>
     <string name="clock_font_serif">Serif</string>
@@ -92,22 +124,34 @@
     <string name="clock_font_thin">Sans-serif Thin</string>
     <string name="pref_key_clock_style">clock_style</string>
     <string name="pref_clock_style_title">Clock style</string>
-    <string name="pref_clock_style_summary">Visual style for clock digits (bubble, neon, etc.)</string>
+    <string
+        name="pref_clock_style_summary"
+    >Visual style for clock digits (bubble, neon, etc.)</string>
     <string name="pref_key_show_date">show_date</string>
     <string name="pref_show_date_title">Show date</string>
-    <string name="pref_show_date_summary">Display the date below the clock</string>
+    <string
+        name="pref_show_date_summary"
+    >Display the date below the clock</string>
     <string name="pref_key_battery_enabled">battery_enabled</string>
     <string name="pref_battery_title">Show battery status</string>
-    <string name="pref_battery_summary">Display battery level and charging status</string>
+    <string
+        name="pref_battery_summary"
+    >Display battery level and charging status</string>
     <string name="pref_key_battery_font_size">battery_font_size</string>
     <string name="pref_battery_size_title">Battery text size</string>
-    <string name="pref_battery_size_summary">Adjust the text size of the battery percentage</string>
+    <string
+        name="pref_battery_size_summary"
+    >Adjust the text size of the battery percentage</string>
     <string name="pref_key_clock_24h">clock_24h</string>
     <string name="pref_clock_24h_title">24-hour format</string>
-    <string name="pref_clock_24h_summary">Show 24-hour time (14:30) instead of 12-hour (2:30)</string>
+    <string
+        name="pref_clock_24h_summary"
+    >Show 24-hour time (14:30) instead of 12-hour (2:30)</string>
     <string name="pref_key_transition_animation">transition_animation</string>
     <string name="pref_transition_title">Digit transition animation</string>
-    <string name="pref_transition_summary">Animate digits when the minute changes</string>
+    <string
+        name="pref_transition_summary"
+    >Animate digits when the minute changes</string>
     <string name="style_default">Normal</string>
     <string name="style_bubbly">Bubbly</string>
     <string name="style_neon">Neon</string>
@@ -122,15 +166,21 @@
     <string name="pref_slot_size_large">Large</string>
     <string name="pref_key_bubble_digit_colors">bubble_digit_colors</string>
     <string name="pref_bubble_digit_colors_title">Bubble digit colors</string>
-    <string name="pref_bubble_digit_colors_summary">Set individual colors for each digit and colon</string>
+    <string
+        name="pref_bubble_digit_colors_summary"
+    >Set individual colors for each digit and colon</string>
     <string name="pref_key_gradient_colors">gradient_colors</string>
     <string name="pref_gradient_colors_title">Gradient colors</string>
-    <string name="pref_gradient_colors_summary">Set start and end colors for the gradient style</string>
+    <string
+        name="pref_gradient_colors_summary"
+    >Set start and end colors for the gradient style</string>
 
     <!-- Auto-start -->
     <string name="section_autostart">Auto-start</string>
     <string name="pref_autostart_title">Enable auto-start on charge</string>
-    <string name="pref_autostart_summary">Tap to open dream settings. Must: (1) select Dock as screen saver, (2) set \"When to start\" to \"While charging\", (3) battery = Unrestricted, (4) disable Battery Saver when testing.</string>
+    <string
+        name="pref_autostart_summary"
+    >Tap to open dream settings. Must: (1) select Dock as screen saver, (2) set \"When to start\" to \"While charging\", (3) battery = Unrestricted, (4) disable Battery Saver when testing.</string>
 
     <!-- About -->
     <string name="section_about">About</string>
@@ -138,11 +188,17 @@
     <string name="about_repo">github.com/Mobinshahidi/Dock</string>
     <string name="pref_key_widget_rail_height">widget_rail_height</string>
     <string name="pref_widget_rail_height_title">Widget rail height</string>
-    <string name="pref_widget_rail_height_summary">Overall height of the widget area in portrait mode</string>
+    <string
+        name="pref_widget_rail_height_summary"
+    >Overall height of the widget area in portrait mode</string>
     <string name="pref_key_widget_show_portrait">widget_show_portrait</string>
-    <string name="pref_widget_show_portrait_title">Show widgets in portrait</string>
+    <string
+        name="pref_widget_show_portrait_title"
+    >Show widgets in portrait</string>
     <string name="pref_key_widget_show_landscape">widget_show_landscape</string>
-    <string name="pref_widget_show_landscape_title">Show widgets in landscape</string>
+    <string
+        name="pref_widget_show_landscape_title"
+    >Show widgets in landscape</string>
 
     <!-- Widget strings (Phase 4) -->
     <string name="widget_add">Add widget</string>

@@ -64,8 +64,38 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
         val v = clockView ?: return
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
-        val colorHex = prefs.getString(context.getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+        val style = prefs.getString(context.getString(R.string.pref_key_clock_style), "default") ?: "default"
+
+        // Resolve the color using the same per-style key + fallback logic as the
+        // real dream clock (DockDreamService), so the preview never shows a
+        // stale/wrong style's color.
+        val styleColorKey = when (style) {
+            "bubble" -> R.string.pref_key_clock_color_bubble
+            "neon" -> R.string.pref_key_clock_color_neon
+            "gradient" -> R.string.pref_key_clock_color_gradient
+            "mono" -> R.string.pref_key_clock_color_mono
+            "outline" -> R.string.pref_key_clock_color_outline
+            else -> R.string.pref_key_clock_color_normal
+        }
+        val colorHex = prefs.getString(context.getString(styleColorKey), null)
+            ?: prefs.getString(context.getString(R.string.pref_key_clock_color), "#c3c2b7")
+            ?: "#c3c2b7"
         try { v.clockColor = Color.parseColor(colorHex) } catch (_: Exception) {}
+
+        // Per-digit bubble colors.
+        val digitColorsStr = prefs.getString(context.getString(R.string.pref_key_clock_color_bubble), null)
+        v.bubbleDigitColors = if (digitColorsStr != null) {
+            try { digitColorsStr.split(",").map { Color.parseColor(it.trim()) }.toIntArray() } catch (_: Exception) { null }
+        } else null
+
+        // Multi-stop gradient colors.
+        val gradStr = prefs.getString(context.getString(R.string.pref_key_clock_color_gradient), null)
+        v.gradientColors = if (gradStr != null) {
+            try {
+                val parts = gradStr.split(",").map { Color.parseColor(it.trim()) }
+                if (parts.size >= 2) parts.toIntArray() else null
+            } catch (_: Exception) { null }
+        } else null
 
         val fontOption = prefs.getString(context.getString(R.string.pref_key_clock_font), "default") ?: "default"
         v.clockTypeface = when (fontOption) {
@@ -90,7 +120,6 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
 
         v.is24Hour = prefs.getBoolean(context.getString(R.string.pref_key_clock_24h), true)
 
-        val style = prefs.getString(context.getString(R.string.pref_key_clock_style), "default") ?: "default"
         v.clockStyle = when (style) {
             "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
             "neon" -> AnimatedClockView.ClockStyle.NEON

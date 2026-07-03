@@ -2,6 +2,7 @@ package com.nousresearch.dock.settings
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -91,35 +92,6 @@ class SettingsActivity : AppCompatActivity() {
         private var pendingWidgetSlot = -1
         private var pendingWidgetId = -1
         private var pendingWidgetProvider: ComponentName? = null
-
-        private val pickWidgetLauncher =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-                if (result.resultCode == Activity.RESULT_OK && pendingWidgetSlot != -1) {
-                    val manager = WidgetHostManager.getInstance(requireContext())
-                    if (manager.bindAppWidget(pendingWidgetSlot, pendingWidgetId, result.data)) {
-                        // Bound directly
-                    } else {
-                        // Need ACTION_REQUEST_BIND_APPWIDGET
-                        pendingWidgetProvider = result.data?.getParcelableExtra<ComponentName>(
-                            AppWidgetManager.EXTRA_APPWIDGET_PROVIDER
-                        )
-                        if (pendingWidgetProvider != null) {
-                            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
-                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
-                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, pendingWidgetProvider as android.os.Parcelable)
-                            bindWidgetLauncher.launch(intent)
-                        } else {
-                            manager.cleanupWidgetId(pendingWidgetId)
-                            pendingWidgetSlot = -1
-                            pendingWidgetId = -1
-                        }
-                    }
-                } else if (pendingWidgetSlot != -1) {
-                    WidgetHostManager.getInstance(requireContext()).cleanupWidgetId(pendingWidgetId)
-                    pendingWidgetSlot = -1
-                    pendingWidgetId = -1
-                }
-            }
 
         private val pickFontLauncher =
             registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -572,15 +544,139 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<ClockStylePreviewPreference>("clock_style_preview")?.stopPreview()
         }
 
+        /**
+         * In-app widget chooser. Replaces the system ACTION_APPWIDGET_PICK dialog
+         * (whose row layout/spacing we can't control) with our own list, styled
+         * to match the rest of Settings and with a guaranteed minimum 10dp gap
+         * between each widget row (icon + name).
+         */
         private fun launchWidgetPicker(slotIndex: Int) {
-            val manager = WidgetHostManager.getInstance(requireContext())
-            pendingWidgetId = manager.allocateWidgetIdForSlot(slotIndex)
-            if (pendingWidgetId == -1) return
+            val ctx = requireContext()
+            val appWidgetManager = AppWidgetManager.getInstance(ctx)
+            val pm = ctx.packageManager
+            val providers = try {
+                appWidgetManager.installedProviders.sortedBy {
+                    it.loadLabel(pm).lowercase()
+                }
+            } catch (e: Exception) {
+                emptyList<AppWidgetProviderInfo>()
+            }
 
-            pendingWidgetSlot = slotIndex
-            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK)
-                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId)
-            pickWidgetLauncher.launch(intent)
+            val dp = ctx.resources.displayMetrics.density
+            val rowGap = (10 * dp).toInt()
+            showWidgetPickerDialog(ctx, slotIndex, providers, rowGap)
+        }
+
+        private fun showWidgetPickerDialog(
+            ctx: Context,
+            slotIndex: Int,
+            providers: List<AppWidgetProviderInfo>,
+            rowGap: Int
+        ) {
+            val pm = ctx.packageManager
+            val dp = ctx.resources.displayMetrics.density
+            val outerPadding = (16 * dp).toInt()
+            val rowPadding = (12 * dp).toInt()
+            val iconSize = (40 * dp).toInt()
+
+            val list = android.widget.LinearLayout(ctx).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(outerPadding, outerPadding, outerPadding, outerPadding)
+            }
+            val scroll = android.widget.ScrollView(ctx).apply { addView(list) }
+
+            if (providers.isEmpty()) {
+                list.addView(android.widget.TextView(ctx).apply {
+                    text = getString(R.string.widget_picker_empty)
+                    setTextColor(Color.parseColor("#c3c2b7"))
+                    textSize = 14f
+                })
+            }
+
+            lateinit var dialog: AlertDialog
+
+            for ((index, info) in providers.withIndex()) {
+                val label = try { info.loadLabel(pm) } catch (e: Exception) { info.provider.flattenToShortString() }
+                val icon: android.graphics.drawable.Drawable? = try {
+                    info.loadIcon(ctx, ctx.resources.displayMetrics.densityDpi)
+                } catch (e: Exception) {
+                    try { pm.getApplicationIcon(info.provider.packageName) } catch (e2: Exception) { null }
+                }
+
+                val outValue = android.util.TypedValue()
+                ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+
+                val row = android.widget.LinearLayout(ctx).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    isClickable = true
+                    isFocusable = true
+                    setBackgroundResource(outValue.resourceId)
+                    setPadding(rowPadding, rowPadding, rowPadding, rowPadding)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).also { lp ->
+                        // Guarantee at least 10dp of space before the next row.
+                        if (index < providers.size - 1) lp.setMargins(0, 0, 0, rowGap)
+                    }
+                }
+
+                row.addView(android.widget.ImageView(ctx).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(iconSize, iconSize)
+                    if (icon != null) setImageDrawable(icon)
+                })
+
+                row.addView(android.widget.TextView(ctx).apply {
+                    text = label
+                    textSize = 15f
+                    setTextColor(Color.parseColor("#c3c2b7"))
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    ).also { it.setMargins((16 * dp).toInt(), 0, 0, 0) }
+                })
+
+                row.setOnClickListener {
+                    dialog.dismiss()
+                    bindWidgetFromCustomPicker(slotIndex, info)
+                }
+
+                list.addView(row)
+            }
+
+            dialog = AlertDialog.Builder(ctx)
+                .setTitle(getString(R.string.widget_picker_title))
+                .setView(scroll)
+                .setNegativeButton(getString(android.R.string.cancel), null)
+                .create()
+            dialog.show()
+        }
+
+        /** Binds the chosen widget provider to [slotIndex], requesting the ACTION_APPWIDGET_BIND permission if needed. */
+        private fun bindWidgetFromCustomPicker(slotIndex: Int, info: AppWidgetProviderInfo) {
+            val ctx = requireContext()
+            val manager = WidgetHostManager.getInstance(ctx)
+            val appWidgetId = manager.allocateWidgetIdForSlot(slotIndex)
+            if (appWidgetId == -1) return
+
+            val appWidgetManager = AppWidgetManager.getInstance(ctx)
+            val bound = try {
+                appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, info.provider)
+            } catch (e: Exception) {
+                false
+            }
+
+            if (bound) {
+                manager.finalizeWidgetBinding(slotIndex, appWidgetId, info.provider)
+            } else {
+                pendingWidgetSlot = slotIndex
+                pendingWidgetId = appWidgetId
+                pendingWidgetProvider = info.provider
+                val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider as android.os.Parcelable)
+                bindWidgetLauncher.launch(intent)
+            }
         }
 
         private fun updateWidgetPrefsVisibility(enabled: Boolean) {
@@ -652,7 +748,12 @@ class SettingsActivity : AppCompatActivity() {
             updatePickPhotosSummary(count)
         }
 
-        /** Full RGB + hex color picker dialog that writes to [prefKey] and [fallbackKey]. */
+        /**
+         * Full RGB + hex color picker dialog. Writes the chosen color only to
+         * [prefKey] (the style-specific pref). [fallbackKey] is used solely as a
+         * read-time default when [prefKey] has never been set, and is never
+         * overwritten here.
+         */
         private fun showFullColorPicker(
             ctx: Context, prefs: SharedPreferences,
             prefKey: String, fallbackKey: String, initial: Int
@@ -773,7 +874,11 @@ class SettingsActivity : AppCompatActivity() {
                         val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
                         String.format("#%02X%02X%02X", rv, gv, bv)
                     } catch (e: Exception) { "#c3c2b7" }
-                    prefs.edit().putString(prefKey, hex).putString(fallbackKey, hex).apply()
+                    // Only write the style-specific key. Writing to [fallbackKey] (the
+                    // shared "clock_color" pref) here would leak this style's color into
+                    // every other style's default, making switching styles look like it
+                    // "remembers" the wrong color.
+                    prefs.edit().putString(prefKey, hex).apply()
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
