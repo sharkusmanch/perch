@@ -60,7 +60,7 @@ class SettingsActivity : AppCompatActivity() {
                 getString(R.string.pref_key_clock_color_gradient),
                 getString(R.string.pref_key_clock_color_mono),
                 getString(R.string.pref_key_clock_color_outline),
-                getString(R.string.pref_key_clock_font),
+                getString(R.string.pref_key_clock_color),
                 getString(R.string.pref_key_clock_font),
                 getString(R.string.pref_key_clock_font_file),
                 getString(R.string.pref_key_oled_mode),
@@ -273,31 +273,27 @@ class SettingsActivity : AppCompatActivity() {
                 true
             }
 
-            // Per-style clock color pickers
-            val styleColorPrefs = mapOf(
-                "default" to getString(R.string.pref_key_clock_color_normal),
-                "bubble" to getString(R.string.pref_key_clock_color_bubble),
-                "neon" to getString(R.string.pref_key_clock_color_neon),
-                "gradient" to getString(R.string.pref_key_clock_color_gradient),
-                "mono" to getString(R.string.pref_key_clock_color_mono),
-                "outline" to getString(R.string.pref_key_clock_color_outline)
-            )
-
-            // The old clock_color pref is kept for the date/battery fallback, but
-            // each style gets its own color that overrides it. We write to both
-            // so the old key remains the universal fallback.
-            for ((styleKey, prefKey) in styleColorPrefs) {
-                findPreference<Preference>(prefKey)?.setOnPreferenceClickListener {
-                    val ctx = requireContext()
-                    val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-                    // Read from the universal fallback, then override for this style
-                    val fallback = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
-                    val styleHex = prefs.getString(prefKey, fallback) ?: fallback
-                    val currentColor = try { Color.parseColor(styleHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
-
-                    showFullColorPicker(ctx, prefs, prefKey, getString(R.string.pref_key_clock_color), currentColor)
-                    true
+            // Single clock color picker — reads/writes the key matching the current style.
+            // Each style stores its own color (clock_color_normal, clock_color_bubble, etc.)
+            // and the universal clock_color key is kept as fallback for date/battery.
+            findPreference<Preference>(getString(R.string.pref_key_clock_color))?.setOnPreferenceClickListener {
+                val ctx = requireContext()
+                val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+                val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
+                val styleKey = when (style) {
+                    "bubble" -> getString(R.string.pref_key_clock_color_bubble)
+                    "neon" -> getString(R.string.pref_key_clock_color_neon)
+                    "gradient" -> getString(R.string.pref_key_clock_color_gradient)
+                    "mono" -> getString(R.string.pref_key_clock_color_mono)
+                    "outline" -> getString(R.string.pref_key_clock_color_outline)
+                    else -> getString(R.string.pref_key_clock_color_normal)
                 }
+                val fallback = prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7") ?: "#c3c2b7"
+                val styleHex = prefs.getString(styleKey, fallback) ?: fallback
+                val currentColor = try { Color.parseColor(styleHex) } catch (e: Exception) { Color.parseColor("#c3c2b7") }
+
+                showFullColorPicker(ctx, prefs, styleKey, getString(R.string.pref_key_clock_color), currentColor)
+                true
             }
 
             // Bubble digit colors — per-digit picker for H1, H2, :, M1, M2
@@ -307,9 +303,6 @@ class SettingsActivity : AppCompatActivity() {
             // Visibility depends on selected clock style
             fun updateStyleDependentPrefs() {
                 val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
-                for ((sKey, pKey) in styleColorPrefs) {
-                    findPreference<Preference>(pKey)?.isVisible = (sKey == style)
-                }
                 bubbleColorsPref?.isVisible = (style == "bubble")
                 gradientColorsPref?.isVisible = (style == "gradient")
             }

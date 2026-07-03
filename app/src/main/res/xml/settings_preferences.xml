@@ -83,39 +83,9 @@
         android:summary="@string/pref_clock_font_summary" />
 
     <Preference
-        android:key="@string/pref_key_clock_color_normal"
+        android:key="@string/pref_key_clock_color"
         android:title="@string/pref_clock_color_title"
         android:summary="@string/pref_clock_color_summary" />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_bubble"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:visible="false" />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_neon"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:visible="false" />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_gradient"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:visible="false" />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_mono"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:visible="false" />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_outline"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-        android:visible="false" />
 
     <ListPreference
         android:key="@string/pref_key_clock_style"
