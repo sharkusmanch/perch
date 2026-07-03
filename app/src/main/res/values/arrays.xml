@@ -123,6 +123,18 @@
         <item>large</item>
     </string-array>
 
+    <!-- Widget rail height in portrait -->
+    <string-array name="widget_rail_height_labels">
+        <item>Small</item>
+        <item>Medium (default)</item>
+        <item>Large</item>
+    </string-array>
+    <string-array name="widget_rail_height_values">
+        <item>small</item>
+        <item>medium</item>
+        <item>large</item>
+    </string-array>
+
     <!-- Clock visual styles -->
     <string-array name="clock_style_labels">
         <item>Normal</item>

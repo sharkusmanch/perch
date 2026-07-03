@@ -169,6 +169,15 @@
         android:defaultValue="1"
         android:dependency="@string/pref_key_widgets_enabled" />
 
+    <ListPreference
+        android:key="@string/pref_key_widget_rail_height"
+        android:title="@string/pref_widget_rail_height_title"
+        android:summary="@string/pref_widget_rail_height_summary"
+        android:entries="@array/widget_rail_height_labels"
+        android:entryValues="@array/widget_rail_height_values"
+        android:defaultValue="medium"
+        android:dependency="@string/pref_key_widgets_enabled" />
+
     <Preference
         android:key="manage_slot_1"
         android:title="@string/widget_manage_slot"

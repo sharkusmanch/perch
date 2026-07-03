@@ -221,6 +221,13 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
+            // Widget rail height in portrait
+            findPreference<ListPreference>(getString(R.string.pref_key_widget_rail_height))
+                ?.setOnPreferenceChangeListener { _, _ ->
+                    WidgetHostManager.getInstance(context).notifySlotSizeChanged()
+                    true
+                }
+
             // Auto-start guide — open system dream settings + ADB commands
             findPreference<Preference>("auto_start_guide")?.setOnPreferenceClickListener {
                 val ctx = requireContext()
@@ -406,6 +413,15 @@ class SettingsActivity : AppCompatActivity() {
             // Font upload picker
             findPreference<Preference>("clock_font_upload")?.setOnPreferenceClickListener {
                 pickFontLauncher.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-opentype"))
+                true
+            }
+
+            // About — open GitHub repo
+            findPreference<Preference>("about_license")?.setOnPreferenceClickListener {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://${getString(R.string.about_repo)}"))
+                    startActivity(intent)
+                } catch (_: Exception) {}
                 true
             }
         }

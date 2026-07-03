@@ -242,13 +242,16 @@ class WidgetHostManager private constructor(
             it.orientation = if (isLandscape) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
         }
 
-        // Give the portrait rail more height when more slots are present
+        // Give the portrait rail a configurable height
         if (!isLandscape) {
-            val railHeightDp = when (slotCount) {
-                3 -> 200
-                2 -> 150
-                else -> 100
+            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+            val sizePref = prefs.getString("widget_rail_height", "medium") ?: "medium"
+            val baseHeight = when (sizePref) {
+                "small" -> 80
+                "large" -> 180
+                else -> 120
             }
+            val railHeightDp = baseHeight + (slotCount - 1) * 40
             widgetRail?.layoutParams?.height = (railHeightDp * density).toInt()
         }
 
