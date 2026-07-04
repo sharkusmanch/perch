@@ -43,8 +43,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Decode keystore
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
-        run: echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > app/dock-release.jks
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        if: env.KEYSTORE_B64 != ''
+        run: echo "$KEYSTORE_B64" | base64 -d > app/dock-release.p12
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
