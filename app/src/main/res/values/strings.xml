@@ -16,6 +16,11 @@
 
     <!-- Display section -->
     <string name="section_display">Display</string>
+    <string name="pref_key_app_theme">app_theme</string>
+    <string name="pref_app_theme_title">App theme</string>
+    <string
+        name="pref_app_theme_summary"
+    >Light, dark, or match your phone’s system theme (Settings app only)</string>
     <string name="pref_brightness_title">Brightness override</string>
     <string
         name="pref_brightness_summary"

@@ -10,6 +10,15 @@
         android:layout="@layout/preference_category_custom"
     />
 
+    <ListPreference
+        android:key="@string/pref_key_app_theme"
+        android:title="@string/pref_app_theme_title"
+        android:summary="@string/pref_app_theme_summary"
+        android:entries="@array/app_theme_labels"
+        android:entryValues="@array/app_theme_values"
+        android:defaultValue="system"
+    />
+
     <SwitchPreferenceCompat
         android:key="@string/pref_key_oled_mode"
         android:title="@string/pref_oled_title"

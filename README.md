@@ -24,6 +24,18 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 
 ---
 
+## Screenshots
+
+![Dock Screensaver 1](screenShots/dock_screensaver1.png)
+![Dock Screensaver 2](screenShots/dock_screensaver2.png)
+![Dock Screensaver 3](screenShots/dock_screensaver3.png)
+![Dock Screensaver 4](screenShots/dock_screensaver4.png)
+![Dock Screensaver 5](screenShots/dock_screensaver5.png)
+![Dock Screensaver 6](screenShots/dock_screensaver6.png)
+![Dock Screensaver 7](screenShots/dock_screensaver7.png)
+
+---
+
 ## Design Language
 
 - **Background:** `#1e1e1d` (warm near-black) or `#000000` (OLED option)

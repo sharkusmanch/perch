@@ -11,4 +11,5 @@ local.properties
 /app/buildlogo.png
 logo.png
 *.jks
+*.p12
 *.jks.b64

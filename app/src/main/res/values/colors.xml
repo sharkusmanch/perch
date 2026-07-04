@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <resources>
     <!-- Palette ========================================= -->
     <color name="bg_dark">#1e1e1d</color>
@@ -9,4 +9,14 @@
     <color name="bg_surface">#2a2a28</color>
     <!-- Scrim overlay for slideshow -->
     <color name="scrim">#80000000</color>
+
+    <!-- Settings app UI palette (light/day default). The dark counterparts
+         used when the Settings app theme is Dark (or System follows dark)
+         live in values-night/themes.xml, reusing bg_dark/text_primary above.
+         The dream/screensaver itself always stays dark regardless of this
+         and is unaffected by these tokens. -->
+    <color name="settings_bg">#F7F4EF</color>
+    <color name="settings_surface">#FFFFFF</color>
+    <color name="settings_text_primary">#2B2A28</color>
+    <color name="settings_text_secondary">#5B5952</color>
 </resources>

@@ -21,6 +21,7 @@ import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
@@ -42,12 +43,31 @@ import com.nousresearch.dock.widget.WidgetHostManager
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run before super.onCreate() so the correct day/night resources
+        // (see values/themes.xml + values-night/themes.xml) are already
+        // active when this activity's window/theme is resolved.
+        applyPersistedNightMode(this)
         super.onCreate(savedInstanceState)
 
         supportFragmentManager
             .beginTransaction()
             .replace(android.R.id.content, DockSettingsFragment())
             .commit()
+    }
+
+    companion object {
+        /** Maps the persisted "App theme" pref (system/light/dark) to an AppCompatDelegate night mode. */
+        fun nightModeFor(themePref: String): Int = when (themePref) {
+            "light" -> AppCompatDelegate.MODE_NIGHT_NO
+            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+
+        fun applyPersistedNightMode(ctx: Context) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+            val themePref = prefs.getString(ctx.getString(R.string.pref_key_app_theme), "system") ?: "system"
+            AppCompatDelegate.setDefaultNightMode(nightModeFor(themePref))
+        }
     }
 
     class DockSettingsFragment : PreferenceFragmentCompat() {
@@ -160,6 +180,15 @@ class SettingsActivity : AppCompatActivity() {
 
             val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
             val context = requireContext()
+
+            // --- App theme (Settings app UI only; the dream stays dark) ---
+            findPreference<ListPreference>(getString(R.string.pref_key_app_theme))
+                ?.setOnPreferenceChangeListener { _, newValue ->
+                    val themePref = newValue as? String ?: "system"
+                    AppCompatDelegate.setDefaultNightMode(SettingsActivity.nightModeFor(themePref))
+                    activity?.recreate()
+                    true
+                }
 
             // --- Pick photos preference ---
             val pickPhotosPref = findPreference<Preference>("pick_photos")
@@ -355,7 +384,9 @@ class SettingsActivity : AppCompatActivity() {
                     }
                     row.addView(android.widget.TextView(ctx).apply {
                         text = labels[i]; textSize = 16f
-                        setTextColor(Color.parseColor("#c3c2b7"))
+                        // No explicit color: inherits the dialog's theme-correct
+                        // text color instead of a fixed tone that could go
+                        // invisible against a light or dark dialog background.
                         layoutParams = android.widget.LinearLayout.LayoutParams(
                             0, android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0.3f
                         )
@@ -594,7 +625,6 @@ class SettingsActivity : AppCompatActivity() {
             if (providers.isEmpty()) {
                 list.addView(android.widget.TextView(ctx).apply {
                     text = getString(R.string.widget_picker_empty)
-                    setTextColor(Color.parseColor("#c3c2b7"))
                     textSize = 14f
                 })
             }
@@ -636,7 +666,6 @@ class SettingsActivity : AppCompatActivity() {
                 row.addView(android.widget.TextView(ctx).apply {
                     text = label
                     textSize = 15f
-                    setTextColor(Color.parseColor("#c3c2b7"))
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
                     ).also { it.setMargins((16 * dp).toInt(), 0, 0, 0) }
