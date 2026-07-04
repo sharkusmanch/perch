@@ -26,13 +26,15 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 
 ## Screenshots
 
-![Dock Screensaver 1](screenShots/dock_screensaver1.png)
-![Dock Screensaver 2](screenShots/dock_screensaver2.png)
-![Dock Screensaver 3](screenShots/dock_screensaver3.png)
-![Dock Screensaver 4](screenShots/dock_screensaver4.png)
-![Dock Screensaver 5](screenShots/dock_screensaver5.png)
-![Dock Screensaver 6](screenShots/dock_screensaver6.png)
-![Dock Screensaver 7](screenShots/dock_screensaver7.png)
+<p align="center">
+  <img src="screenShots/dock_screensaver1.png" width="140">
+  <img src="screenShots/dock_screensaver2.png" width="140">
+  <img src="screenShots/dock_screensaver3.png" width="140">
+  <img src="screenShots/dock_screensaver4.png" width="140">
+  <img src="screenShots/dock_screensaver5.png" width="140">
+  <img src="screenShots/dock_screensaver6.png" width="140">
+  <img src="screenShots/dock_screensaver7.png" width="140">
+</p>
 
 ---
 
@@ -69,40 +71,22 @@ Workflow: `.github/workflows/build.yml`
 Triggers: push to `main`, PRs, version tags (`v*`)
 Artifacts:
 - `Dock-debug.apk` — every push/PR (debug-signed, installable)
-- `Dock-release-unsigned.apk` — push to `main` & tags (unsigned, needs local signing before sideload)
+- `Dock.apk` — signed release APK on tags (signed via CI keystore)
 
 **For a debug build you can install directly:** download `Dock-debug-apk` artifact and run `adb install app-debug.apk`.
 
 ---
 
-## How to get a signed Release APK (automatically via CI)
+## How to get a signed Release APK
 
-The CI signs release builds using a keystore stored as a GitHub secret. To set it up:
+The CI signs release APKs automatically. Tag and push:
 
-1. **Create a keystore** (if you don't have one):
-   ```bash
-   keytool -genkey -v -keystore dock-release.jks -alias dock -keyalg RSA -keysize 2048 -validity 10000
-   ```
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
-2. **Base64-encode it**:
-   ```bash
-   base64 -i dock-release.jks | pbcopy   # macOS
-   base64 -w0 dock-release.jks            # Linux → copy output
-   ```
-
-3. **Add secrets to GitHub**:
-   - `KEYSTORE_B64` — the base64 string from step 2
-   - `KEYSTORE_PASSWORD` — keystore password
-   - `KEY_ALIAS` — alias you used (e.g. `dock`)
-   - `KEY_PASSWORD` — key password
-
-4. **Tag and push**:
-   ```bash
-   git tag v0.2.0-beta
-   git push origin v0.2.0-beta
-   ```
-
-The CI will build, sign, align, and attach a **signed release APK** to the GitHub Release.
+A GitHub Release will be created with `Dock.apk` attached, signed and ready to sideload.
 
 ---
 

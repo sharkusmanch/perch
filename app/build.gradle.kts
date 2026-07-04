@@ -37,6 +37,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            applicationVariants.all {
+                outputs.all {
+                    if (name == "release") {
+                        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "Dock.apk"
+                    }
+                }
+            }
         }
     }
 
