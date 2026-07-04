@@ -3,29 +3,14 @@
 <p align="center">
   <img alt="Downloads" src="https://img.shields.io/github/downloads/Mobinshahidi/Dock/total?color=%23d57455&label=Downloads&style=flat-square">
   <img alt="Release" src="https://img.shields.io/github/v/release/Mobinshahidi/Dock?color=%23d57455&label=Release&style=flat-square">
+  <img alt="Platform" src="https://img.shields.io/badge/Android-8.0%2B-%23d57455?style=flat-square&logo=android">
+  <img alt="License" src="https://img.shields.io/github/license/Mobinshahidi/Dock?color=%23d57455&style=flat-square">
 </p>
 
-A native Android screensaver (DreamService) inspired by the *functionality* of iOS StandBy mode — clock, live widgets, optional photo background, auto-activates while charging — with its own **original minimal/futuristic visual identity**.
-
----
-
-## Features
-
-- DreamService registers as system screensaver; clock + date on warm dark background
-- Settings screen with slideshow / widgets toggles
-- Photo slideshow: system picker, crossfade, scrim overlay, interval
-- Live widgets: `AppWidgetHost` integration, slot management, layout resize
-- Night auto-dim (accent tint), responsive clock sizing, spring animations
-- **6 clock styles** — Default, Bubble, Neon, Gradient, Mono, Outline
-- **Per-style color pickers** (with hex input + RGB sliders)
-- **Bubble per-digit colors** — individual color for each digit + colon
-- **Gradient multi-color picker** — 2+ colors, add/remove, live preview
-- **Independent date & battery colors** — separate from clock color
-- **Per-orientation widget visibility** — show/hide rails in portrait/landscape
-- **Shake animation** — accelerometer triggers per-digit spring + sine drift on all styles
-- **Custom font upload** — pick `.ttf`/`.otf` from device storage
-- **OLED mode** — true black background
-- **About link** — opens GitHub repo in browser
+<p align="center">
+  <b>A native Android screensaver (DreamService) that transforms your charging phone into a sleek, customizable bedside display.</b><br>
+  Inspired by iOS StandBy, but with its own <i>original minimal/futuristic identity</i> — zero ads, zero tracking, zero network.
+</p>
 
 ---
 
@@ -43,23 +28,107 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 
 ---
 
+## Features
+
+### Core Experience
+- **DreamService** — registers as your system screensaver; activates automatically while charging
+- **6 distinct clock styles** — Default, Bubble, Neon, Gradient, Mono, Outline — each with its own personality
+- **Per-style color pickers** — hex input + RGB sliders for granular control
+- **Live settings preview** — see your clock style and color changes instantly without leaving settings
+- **Custom font upload** — import `.ttf` or `.otf` files from your device storage
+
+### Clock Styles
+| Style | Vibe |
+|-------|------|
+| **Default** | Clean, minimal, always readable |
+| **Bubble** | Playful per-digit coloring — assign a different color to each digit and colon |
+| **Neon** | Glowing electric aesthetic with bloom effect |
+| **Gradient** | Multi-color sweep across the time string (2+ color stops, add/remove live) |
+| **Mono** | Bold single-weight monoline for a technical/industrial feel |
+| **Outline** | Hollow strokes with transparent centers — modern and airy |
+
+### Photo Slideshow
+- **System photo picker** — no storage permission needed; uses Android's modern picker API
+- **Crossfade transitions** — smooth fade between photos
+- **Scrim overlay** — readable clock/widget text over any image
+- **Configurable interval** — set how long each photo stays on screen
+- **Smooth on/off** — enable or disable without losing your photo selection
+
+### Live Widgets
+- **AppWidgetHost integration** — drop real Android widgets on your screensaver canvas
+- **Multi-slot management** — 1 to 3 widget slots with individual sizing
+- **Per-orientation visibility** — show/hide the widget rail independently in portrait and landscape
+- **Flexible rail height** — compact, medium, or tall to fit different widget sizes
+
+### Smart Display
+- **OLED mode** — true black (`#000000`) background for AMOLED displays
+- **Night auto-dim** — configurable time range; automatically dims accent colors during sleep hours
+- **Shake physics** — accelerometer triggers a satisfying per-digit spring + sine drift animation on the clock
+- **Responsive sizing** — clock auto-scales to fit screen width in both orientations
+- **24h / 12h toggle** — respects your time format preference
+
+### Additional Controls
+- **Independent date & battery colors** — set separate colors, separate from the clock
+- **Font size scaling** — fine-tune the clock, date, and battery text sizes as a percentage
+- **Clock position** — left-aligned or centered
+- **Transition animation toggle** — enable/disable the minute-change morph effect
+- **Settings theme** — light, dark, or follow system
+
+### Privacy First
+- **Zero network calls** — no internet permission
+- **No analytics, telemetry, or ads** — fully open source
+- **No storage permission** — uses Android's system photo picker
+- **No location** — your position stays on your device
+
+---
+
 ## Design Language
 
-- **Background:** `#1e1e1d` (warm near-black) or `#000000` (OLED option)
-- **Primary text:** `#c3c2b7` (warm off-white)
-- **Accent:** `#d57455` (terracotta — active states, glow, progress)
-- **Typography:** Thin/light weight (`fontWeight=300`), large clock (~120sp)
+<p align="center">
+  <code style="background:#1e1e1d; color:#c3c2b7; padding:2px 6px">Background #1e1e1d</code>
+  <code style="background:#c3c2b7; color:#1e1e1d; padding:2px 6px">Text #c3c2b7</code>
+  <code style="background:#d57455; color:#fff; padding:2px 6px">Accent #d57455</code>
+</p>
+
+- **Warm near-black** background (`#1e1e1d`) or true OLED black (`#000000` option)
+- **Warm off-white** primary text (`#c3c2b7`) — easy on the eyes in dark rooms
+- **Terracotta accent** (`#d57455`) — active states, glow effects, and progress indicators
+- **Thin/light typography** (`fontWeight=300`) with large clock rendering (~120sp)
+- **Settings** adapts to light/dark with a warm beige surface (`#F7F4EF`) in day mode
 
 ---
 
 ## Requirements
 
-- Android 8.0+ (API 26) — `minSdk 26` for stable `AppWidgetHost`
-- Target Android 14 (API 34)
-- GrapheneOS / stock AOSP compatible
-- **No network permission** — the app makes zero network calls
-- **No broad storage permission** — uses system photo picker only
-- **No analytics / telemetry / ads** — fully open source
+| Requirement | Detail |
+|-------------|--------|
+| **Android** | 8.0+ (API 26) — `minSdk 26` for stable `AppWidgetHost` |
+| **Target** | Android 14 (API 34) |
+| **Compatibility** | GrapheneOS, stock AOSP, and most custom ROMs |
+| **Permissions** | None required for core usage; photo picker uses system UI |
+| **Network** | Not needed — the app makes zero network calls |
+
+---
+
+## Getting Started
+
+### Install
+
+1. Download the latest debug APK from [GitHub Actions](https://github.com/Mobinshahidi/Dock/actions)
+2. Install via `adb install Dock-debug.apk` or transfer to device
+3. Open **Settings → Display → Screen saver** → select **Dock**
+4. Set "When to start screen saver" → **While charging**
+5. Plug in and enjoy
+
+### Configure
+
+Open the Dock app from your launcher to access the full settings panel:
+
+- Pick your **clock style** and **color** from the live preview
+- Add **photos** for the slideshow background
+- Drop **widgets** into the slot rail
+- Toggle **OLED mode** and **night dim** for bedtime
+- Upload a **custom font** for a truly personal look
 
 ---
 
@@ -73,35 +142,23 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 ### GitHub Actions
 
 Workflow: `.github/workflows/build.yml`
+
 Triggers: push to `main`, PRs, version tags (`v*`)
+
 Artifacts:
-- `Dock-debug.apk` — every push/PR (debug-signed, installable)
+- `Dock-debug.apk` — every push/PR (debug-signed, installable on any device)
 - `dock_release_v1_0_1.apk` — signed release APK on tags (e.g. `v1.0.1`)
 
-**For a debug build you can install directly:** download `Dock-debug-apk` artifact and run `adb install app-debug.apk`.
+### Signed Release
 
----
-
-## How to get a signed Release APK
-
-The CI signs release APKs automatically. Tag and push:
+The CI signs release APKs automatically. To create a signed release:
 
 ```bash
 git tag v1.0.1
 git push origin v1.0.1
 ```
 
-A GitHub Release will be created with `dock_release_v1_0_1.apk` attached, signed and ready to sideload.
-
----
-
-## Installing on Device
-
-1. Download `Dock-debug.apk` from the latest GitHub Actions run
-2. Install via `adb install Dock-debug.apk` or transfer to device
-3. Open **Settings → Display → Screen saver** → select **Dock**
-4. Set "When to start screen saver" → **While charging**
-5. Plug in and enjoy
+A GitHub Release will be created with `dock_release_v1_0_1.apk` attached, ready to sideload.
 
 ---
 
