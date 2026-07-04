@@ -45,8 +45,12 @@ jobs:
       - name: Decode keystore
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
-        if: env.KEYSTORE_B64 != ''
-        run: echo "$KEYSTORE_B64" | base64 -d > app/dock-release.p12
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > app/dock-release.p12
+          else
+            echo "No KEYSTORE_B64 secret — release signing will fail (expected for PRs from forks)"
+          fi
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
