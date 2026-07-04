@@ -40,7 +40,8 @@ android {
             applicationVariants.all {
                 outputs.all {
                     if (name == "release") {
-                        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "Dock.apk"
+                        val ver = versionName.replace(".", "_")
+                        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "dock_release_v$ver.apk"
                     }
                 }
             }

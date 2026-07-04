@@ -67,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dock-release-apk
-          path: app/build/outputs/apk/release/Dock.apk
+          path: app/build/outputs/apk/release/dock_release_v*.apk
           retention-days: 30
 
   release:
@@ -87,7 +87,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/Dock.apk
+          files: artifacts/dock_release_v*.apk
           generate_release_notes: true
           tag_name: ${{ github.ref_name }}
           name: Dock ${{ github.ref_name }}

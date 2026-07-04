@@ -1,5 +1,10 @@
 # Dock — Minimal Futuristic Charging Screensaver for Android
 
+<p align="center">
+  <img alt="Downloads" src="https://img.shields.io/github/downloads/Mobinshahidi/Dock/total?color=%23d57455&label=Downloads&style=flat-square">
+  <img alt="Release" src="https://img.shields.io/github/v/release/Mobinshahidi/Dock?color=%23d57455&label=Release&style=flat-square">
+</p>
+
 A native Android screensaver (DreamService) inspired by the *functionality* of iOS StandBy mode — clock, live widgets, optional photo background, auto-activates while charging — with its own **original minimal/futuristic visual identity**.
 
 ---
@@ -71,7 +76,7 @@ Workflow: `.github/workflows/build.yml`
 Triggers: push to `main`, PRs, version tags (`v*`)
 Artifacts:
 - `Dock-debug.apk` — every push/PR (debug-signed, installable)
-- `Dock.apk` — signed release APK on tags (signed via CI keystore)
+- `dock_release_v1_0_0.apk` — signed release APK on tags (e.g. `v1.0.0`)
 
 **For a debug build you can install directly:** download `Dock-debug-apk` artifact and run `adb install app-debug.apk`.
 
@@ -86,7 +91,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-A GitHub Release will be created with `Dock.apk` attached, signed and ready to sideload.
+A GitHub Release will be created with `dock_release_v1_0_0.apk` attached, signed and ready to sideload.
 
 ---
 
