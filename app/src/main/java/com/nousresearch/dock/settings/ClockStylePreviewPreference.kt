@@ -2,9 +2,11 @@ package com.nousresearch.dock.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.util.AttributeSet
+import android.widget.FrameLayout
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceViewHolder
@@ -64,6 +66,20 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
         val v = clockView ?: return
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
+        // Detect current night mode to adapt preview background and default colors.
+        val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val isNight = nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+
+        // Update preview container background to match the current theme.
+        val container = v.parent as? FrameLayout
+        if (container != null) {
+            container.setBackgroundResource(
+                if (isNight) R.color.bg_dark else R.color.settings_surface
+            )
+        }
+
+        val defaultClockColor = if (isNight) "#c3c2b7" else "#2B2A28"
+
         val style = prefs.getString(context.getString(R.string.pref_key_clock_style), "default") ?: "default"
 
         // Resolve the color using the same per-style key + fallback logic as the
@@ -78,8 +94,8 @@ class ClockStylePreviewPreference @JvmOverloads constructor(
             else -> R.string.pref_key_clock_color_normal
         }
         val colorHex = prefs.getString(context.getString(styleColorKey), null)
-            ?: prefs.getString(context.getString(R.string.pref_key_clock_color), "#c3c2b7")
-            ?: "#c3c2b7"
+            ?: prefs.getString(context.getString(R.string.pref_key_clock_color), defaultClockColor)
+            ?: defaultClockColor
         try { v.clockColor = Color.parseColor(colorHex) } catch (_: Exception) {}
 
         // Per-digit bubble colors.

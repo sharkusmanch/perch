@@ -28,10 +28,12 @@
         <item name="android:navigationBarColor">@color/settings_bg</item>
         <item
             name="android:textColorPrimary"
-        >@color/settings_text_primary</item>
+        >@color/settings_text_primary_selector</item>
         <item
             name="android:textColorSecondary"
-        >@color/settings_text_secondary</item>
+        >@color/settings_text_secondary_selector</item>
+        <item name="android:textColorHint">@color/settings_text_disabled</item>
+        <item name="android:disabledAlpha">0.38</item>
         <item name="android:windowLightStatusBar">true</item>
         <item
             name="preferenceTheme"

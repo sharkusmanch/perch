@@ -10,8 +10,10 @@
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">#8F8D84</item>
+        <item name="android:textColorPrimary">@color/text_primary_selector</item>
+        <item name="android:textColorSecondary">@color/text_secondary_selector</item>
+        <item name="android:textColorHint">#6F6E66</item>
+        <item name="android:disabledAlpha">0.38</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
     </style>

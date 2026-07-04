@@ -34,11 +34,11 @@ A native Android screensaver (DreamService) inspired by the *functionality* of i
 <p align="center">
   <img src="screenShots/dock_screensaver1.png" width="140">
   <img src="screenShots/dock_screensaver2.png" width="140">
-  <img src="screenShots/dock_screensaver3.png" width="140">
   <img src="screenShots/dock_screensaver4.png" width="140">
   <img src="screenShots/dock_screensaver5.png" width="140">
   <img src="screenShots/dock_screensaver6.png" width="140">
   <img src="screenShots/dock_screensaver7.png" width="140">
+  <img src="screenShots/dock_screensaver3.png" width="140">
 </p>
 
 ---
@@ -76,7 +76,7 @@ Workflow: `.github/workflows/build.yml`
 Triggers: push to `main`, PRs, version tags (`v*`)
 Artifacts:
 - `Dock-debug.apk` — every push/PR (debug-signed, installable)
-- `dock_release_v1_0_0.apk` — signed release APK on tags (e.g. `v1.0.0`)
+- `dock_release_v1_0_1.apk` — signed release APK on tags (e.g. `v1.0.1`)
 
 **For a debug build you can install directly:** download `Dock-debug-apk` artifact and run `adb install app-debug.apk`.
 
@@ -87,11 +87,11 @@ Artifacts:
 The CI signs release APKs automatically. Tag and push:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
-A GitHub Release will be created with `dock_release_v1_0_0.apk` attached, signed and ready to sideload.
+A GitHub Release will be created with `dock_release_v1_0_1.apk` attached, signed and ready to sideload.
 
 ---
 

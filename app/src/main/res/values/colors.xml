@@ -19,4 +19,5 @@
     <color name="settings_surface">#FFFFFF</color>
     <color name="settings_text_primary">#2B2A28</color>
     <color name="settings_text_secondary">#5B5952</color>
+    <color name="settings_text_disabled">#9C9A94</color>
 </resources>
