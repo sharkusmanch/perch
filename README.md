@@ -4,7 +4,7 @@
   <img alt="Downloads" src="https://img.shields.io/github/downloads/Mobinshahidi/Dock/total?color=%23d57455&label=Downloads&style=flat-square">
   <img alt="Release" src="https://img.shields.io/github/v/release/Mobinshahidi/Dock?color=%23d57455&label=Release&style=flat-square">
   <img alt="Platform" src="https://img.shields.io/badge/Android-8.0%2B-%23d57455?style=flat-square&logo=android">
-  <img alt="License" src="https://img.shields.io/github/license/Mobinshahidi/Dock?color=%23d57455&style=flat-square">
+  <img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-%23d57455?style=flat-square">
 </p>
 
 <p align="center">
@@ -114,8 +114,8 @@
 
 ### Install
 
-1. Download the latest debug APK from [GitHub Actions](https://github.com/Mobinshahidi/Dock/actions)
-2. Install via `adb install Dock-debug.apk` or transfer to device
+1. Download the latest APK from the [Releases](https://github.com/Mobinshahidi/Dock/releases) page
+2. Open the downloaded APK on your device and tap **Install**
 3. Open **Settings → Display → Screen saver** → select **Dock**
 4. Set "When to start screen saver" → **While charging**
 5. Plug in and enjoy
@@ -129,36 +129,6 @@ Open the Dock app from your launcher to access the full settings panel:
 - Drop **widgets** into the slot rail
 - Toggle **OLED mode** and **night dim** for bedtime
 - Upload a **custom font** for a truly personal look
-
----
-
-## Build
-
-```bash
-# CI builds automatically on push/PR to main via GitHub Actions.
-# No local Gradle build step required — download APK from Actions artifacts.
-```
-
-### GitHub Actions
-
-Workflow: `.github/workflows/build.yml`
-
-Triggers: push to `main`, PRs, version tags (`v*`)
-
-Artifacts:
-- `Dock-debug.apk` — every push/PR (debug-signed, installable on any device)
-- `dock_release_v1_0_1.apk` — signed release APK on tags (e.g. `v1.0.1`)
-
-### Signed Release
-
-The CI signs release APKs automatically. To create a signed release:
-
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-A GitHub Release will be created with `dock_release_v1_0_1.apk` attached, ready to sideload.
 
 ---
 
