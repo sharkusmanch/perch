@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
-    <string name="app_name">Dock</string>
+    <string name="app_name">Dock StandBy</string>
     <string name="settings_title">Dock Settings</string>
 
     <!-- Toggle keys -->

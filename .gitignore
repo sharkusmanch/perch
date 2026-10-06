@@ -13,3 +13,4 @@ logo.png
 *.jks
 *.p12
 *.jks.b64
+/app/build

@@ -9,11 +9,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.dock.app"
+        applicationId = "io.github.sharkusmanch.dock"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "2.0.0"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -76,6 +76,9 @@ dependencies {
     // ConstraintLayout
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
+    // Swipeable dream pages and clock faces
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
+
     // Activity result API (photo picker)
     implementation("androidx.activity:activity-ktx:1.8.2")
 
@@ -86,4 +89,6 @@ dependencies {
     // Glide for image loading (slideshow)
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

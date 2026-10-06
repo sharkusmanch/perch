@@ -1,0 +1,10 @@
+Dock StandBy
+A fork of Dock (https://github.com/Mobinshahidi/Dock), Copyright the Dock
+authors, licensed under the Apache License, Version 2.0.
+
+Changes in this fork: swipeable Widgets / Photos / Clock pages, Digital,
+Analog and Float clock faces replacing the original clock styles, and a
+light-sensor-driven red Night Mode replacing the scheduled night dim.
+
+Bundled font: Nunito (https://github.com/googlefonts/nunito), licensed under
+the SIL Open Font License 1.1 — see licenses/OFL-Nunito.txt.
