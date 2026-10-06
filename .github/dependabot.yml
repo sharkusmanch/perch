@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Keeps the SHA-pinned actions current; each update shows as a reviewable pull request.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week before proposing a new release, so a bad one can be caught first.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      gradle:
+        patterns: ['*']

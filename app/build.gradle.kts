@@ -17,12 +17,20 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    // Release signing comes from the environment (CI secrets, or exported
+    // locally). Without it a release build is left unsigned.
+    val signingKeystoreFile: String? = System.getenv("SIGNING_KEYSTORE_FILE")
+
     signingConfigs {
-        create("release") {
-            storeFile = file("dock-release.p12")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        if (signingKeystoreFile != null) {
+            create("release") {
+                storeFile = file(signingKeystoreFile)
+                storeType = "pkcs12"
+                storePassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                // A PKCS12 key shares the store's password.
+                keyPassword = System.getenv("SIGNING_KEYSTORE_PASSWORD")
+            }
         }
     }
 
@@ -32,7 +40,7 @@ android {
         }
         release {
             isMinifyEnabled = true
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -40,8 +48,7 @@ android {
             applicationVariants.all {
                 outputs.all {
                     if (name == "release") {
-                        val ver = versionName.replace(".", "_")
-                        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "dock_release_v$ver.apk"
+                        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "perch-$versionName.apk"
                     }
                 }
             }

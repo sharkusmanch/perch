@@ -1,0 +1,148 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds, signs, attests and publishes that version.
+# Running it by hand does everything except publish, as a rehearsal.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Holds the signing key. Its token can only read the repository and
+  # write attestations; it cannot create a release.
+  build:
+    name: Build and sign
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # proves this workflow's identity when signing the attestation
+      attestations: write # stores the build provenance attestation
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Check version and tag
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          if [ -z "$version" ]; then
+            echo "::error::Could not read versionName from app/build.gradle.kts"
+            exit 1
+          fi
+          if [ "$REF_TYPE" = "tag" ]; then
+            if [ "$REF_NAME" != "v$version" ]; then
+              echo "::error::Tag $REF_NAME does not match versionName $version"
+              exit 1
+            fi
+            # Only release commits that are on main.
+            if ! git merge-base --is-ancestor HEAD origin/main; then
+              echo "::error::Tagged commit is not on main"
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # No build cache for releases: nothing from an earlier run can reach the signed APK.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-disabled: true
+
+      - name: Test
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Build signed release APK
+        env:
+          SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          SIGNING_KEYSTORE_PASSWORD: ${{ secrets.SIGNING_KEYSTORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_B64" ] || [ -z "$SIGNING_KEYSTORE_PASSWORD" ] || [ -z "$SIGNING_KEY_ALIAS" ]; then
+            echo "::error::Signing secrets are missing from the release environment"
+            exit 1
+          fi
+          export SIGNING_KEYSTORE_FILE="$RUNNER_TEMP/release.p12"
+          (umask 077 && printf '%s' "$SIGNING_KEYSTORE_B64" | base64 --decode > "$SIGNING_KEYSTORE_FILE")
+          trap 'rm -f "$SIGNING_KEYSTORE_FILE"' EXIT
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Verify signature
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          EXPECTED_CERT_SHA256: ${{ vars.SIGNING_CERT_SHA256 }}
+        run: |
+          apk="app/build/outputs/apk/release/perch-$VERSION.apk"
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)
+          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          if [ -z "$EXPECTED_CERT_SHA256" ] || [ "$actual" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK is not signed with the expected certificate"
+            exit 1
+          fi
+          mkdir dist
+          cp "$apk" dist/
+          (cd dist && sha256sum "perch-$VERSION.apk" > "perch-$VERSION.apk.sha256")
+          cat dist/*.sha256
+
+      # Signed statement that this exact file was built by this workflow from this commit.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*.apk
+
+      - name: Upload release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perch-release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+  # Publishes the files the build job produced. It can write releases but
+  # never sees the signing key and runs no code from the repository.
+  publish:
+    name: Publish GitHub release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # creates the GitHub release
+
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: perch-release
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          (cd dist && sha256sum --check ./*.sha256)
+          gh release create "$TAG" dist/* --title "Perch $TAG" --generate-notes --verify-tag
