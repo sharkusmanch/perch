@@ -5,6 +5,11 @@
 Perch is an Android screen saver (a `DreamService`). It has no ads, no tracking and no internet permission.
 
 <p align="center">
+  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/sharkusmanch/perch"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
+  <a href="https://github.com/sharkusmanch/perch/releases/latest"><img src="https://img.shields.io/github/v/release/sharkusmanch/perch?label=Latest%20release&style=for-the-badge" alt="Latest release" height="56"></a>
+</p>
+
+<p align="center">
   <img src="screenshots/perch_digital.png" width="720" alt="Digital clock face">
 </p>
 
@@ -85,12 +90,7 @@ Settings follow your phone's light/dark mode and, on Android 12 and later, its w
 
 ## Install
 
-<p>
-  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/sharkusmanch/perch"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
-  <a href="https://github.com/sharkusmanch/perch/releases/latest"><img src="https://img.shields.io/github/v/release/sharkusmanch/perch?label=Latest%20release&style=for-the-badge" alt="Latest release" height="56"></a>
-</p>
-
-- **Obtainium:** tap the badge on your phone to add Perch, and Obtainium will keep it updated.
+- **Obtainium:** tap the badge at the top of this page on your phone to add Perch, and Obtainium will keep it updated.
 - **Manually:** download the APK from the [latest release](https://github.com/sharkusmanch/perch/releases/latest) and open it on your phone.
 
 ### Verify a download
