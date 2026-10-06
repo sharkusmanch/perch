@@ -94,6 +94,6 @@
     <string name="about_license">Open source — Apache 2.0</string>
     <string
         name="about_summary"
-    >Based on Dock by Mobinshahidi — github.com/Mobinshahidi/Dock</string>
-    <string name="about_repo">github.com/Mobinshahidi/Dock</string>
+    >github.com/sharkusmanch/perch — based on Dock by Mobin Shahidi</string>
+    <string name="about_repo">github.com/sharkusmanch/perch</string>
 </resources>

@@ -196,8 +196,8 @@ style colours and font upload is deleted with `AnimatedClockView` and
 The autostart guide's ADB command hardcodes
 `com.dock.app/.dream.DockDreamService`; build it from
 `ComponentName(context, DockDreamService::class.java).flattenToString()` so it
-is right for the new ID. The About row credits and links upstream; it will
-point at the fork once the fork is published somewhere.
+is right for the new ID. The About row links to the fork
+(github.com/sharkusmanch/perch) and credits upstream.
 
 Battery percentage: one small text overlay on the root, top-right, above the
 pager (kept as a toggle), so it does not move with page swipes.
