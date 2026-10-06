@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
     <string name="app_name">Perch</string>
-    <string name="settings_title">Perch Settings</string>
 
     <!-- Preference keys -->
     <string name="pref_key_oled_mode">oled_mode</string>
