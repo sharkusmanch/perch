@@ -8,3 +8,10 @@ light-sensor-driven red Night Mode replacing the scheduled night dim.
 
 Bundled font: Nunito (https://github.com/googlefonts/nunito), licensed under
 the SIL Open Font License 1.1 — see licenses/OFL-Nunito.txt.
+
+Settings icons: Material Icons (https://github.com/google/material-design-icons),
+Copyright Google LLC, licensed under the Apache License, Version 2.0.
+
+Upstream's LICENSE file is kept unchanged. Its wording differs in places from
+the canonical Apache License 2.0; it names that license and points to
+http://www.apache.org/licenses/LICENSE-2.0, which is the text this fork relies on.
