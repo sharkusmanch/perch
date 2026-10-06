@@ -75,4 +75,37 @@ class NightModeDeciderTest {
         d.onSample(1f, 9000)
         assertTrue(d.stateAt(9000))
     }
+
+    // The dark held for its whole dwell before the bright sample arrived, so
+    // the flip to on happened; the bright sample then starts the way back.
+    @Test
+    fun contradictingSampleAfterExpiredDwellFlipsThenStartsReturn() {
+        val d = NightModeDecider()
+        d.onSample(100f, 0)
+        d.onSample(1f, 1000)
+        d.onSample(100f, 9000)
+        assertTrue(d.stateAt(9000))
+        assertEquals(14_000L, d.nextDeadlineMs())
+        assertFalse(d.stateAt(14_000))
+    }
+
+    @Test
+    fun thresholdsAreExclusive() {
+        val atEnter = NightModeDecider().apply { onSample(5f, 0) }
+        assertFalse(atEnter.stateAt(0))
+
+        val atExit = NightModeDecider()
+        atExit.onSample(1f, 0)
+        atExit.onSample(15f, 1000)
+        assertTrue(atExit.stateAt(60_000))
+    }
+
+    @Test
+    fun hysteresisBandHoldsOffState() {
+        val d = NightModeDecider()
+        d.onSample(100f, 0)
+        d.onSample(10f, 1000)
+        assertFalse(d.stateAt(20_000))
+        assertNull(d.nextDeadlineMs())
+    }
 }

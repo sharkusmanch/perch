@@ -93,9 +93,12 @@ its hardcoded rail orientation, portrait rail height, show-in-orientation
 checks and the `widgets_enabled` gate that makes the container visible
 (`createSlotViews`, `isOrientationAllowed`, `setEnabled`/`showRail`) are
 replaced by "always visible, fill the page". Its static references to dream
-views are cleared in `detach()`. Because the dream is interactive, tapping a
-widget fires its click action, which usually opens that app and ends the dream
-(behind the lock screen if locked); this is accepted. In landscape the slots sit side by side
+views are cleared in `detach()`. Because the dream is interactive and shows
+over the lock screen, widgets are display-only while the device is locked
+(`KeyguardManager.isDeviceLocked`): each slot intercepts touches so a widget's
+buttons cannot be pressed without unlocking. When the device is unlocked,
+tapping a widget fires its click action, which usually opens that app and ends
+the dream. In landscape the slots sit side by side
 (horizontal), in portrait stacked (vertical) — the reverse of the current rail
 orientation. Slot count, slot sizes and widget picking in settings are
 unchanged. The "rail height" and "show in portrait/landscape" settings are
@@ -109,14 +112,14 @@ With no photos picked the page shows a one-line hint.
 **`ClockPage`**. Vertical `ViewPager2` of faces.
 
 **`dream/faces/ClockFace`** (interface): `var accentColor: Int`,
-`var is24Hour: Boolean`, `start()`, `stop()`. Each face is a custom `View`
+`var is24Hour: Boolean`, `var nightMode: Boolean`, `resume()`, `pause()`. Each face is a custom `View`
 drawing on `Canvas` and scheduling its own redraws:
 
 - `DigitalFaceView` — time in a heavy rounded sans typeface, sized to fill
   ~85 % of the width; small date line above. Redraws once a minute, aligned to
-  the minute boundary. Bundled font: an OFL-licensed heavy rounded face
-  (e.g. Nunito Black) in `res/font`, since system fonts have no reliable
-  rounded-heavy weight.
+  the minute boundary. Bundled font: Nunito (OFL), shipped as the variable
+  font in `assets/fonts` and loaded at weight 900, since system fonts have no
+  reliable rounded-heavy weight.
 - `AnalogFaceView` — dial sized to the screen height, 60 ticks (hour ticks
   heavier), hour and minute hands in white, second hand in the accent colour.
   Redraws once a second.
@@ -191,7 +194,8 @@ style colours and font upload is deleted with `AnimatedClockView` and
 The autostart guide's ADB command hardcodes
 `com.dock.app/.dream.DockDreamService`; build it from
 `ComponentName(context, DockDreamService::class.java).flattenToString()` so it
-is right for the new ID. About links point at the fork, with upstream credited.
+is right for the new ID. The About row credits and links upstream; it will
+point at the fork once the fork is published somewhere.
 
 Battery percentage: one small text overlay on the root, top-right, above the
 pager (kept as a toggle), so it does not move with page swipes.
@@ -227,7 +231,10 @@ pager (kept as a toggle), so it does not move with page swipes.
 - No photos / no widgets: hint text, page still swipeable.
 - Widget host errors: existing handling in `WidgetHostManager` is kept.
 - Orientation change: the service rebuilds the pager and restores page/face
-  from prefs (same teardown/rebuild pattern upstream uses).
+  from prefs (same teardown/rebuild pattern upstream uses). Other
+  configuration changes (theme, locale, font scale) do not rebuild.
+- Photos are decoded at screen size, and a photo that fails to load is
+  skipped.
 
 ## Testing
 

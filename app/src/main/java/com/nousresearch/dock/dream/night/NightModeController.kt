@@ -21,27 +21,29 @@ class NightModeController(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private val lightSensor: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
 
-    val hasSensor: Boolean get() = lightSensor != null
-
     private val handler = Handler(Looper.getMainLooper())
     private val evaluateRunnable = Runnable { evaluate() }
     private var decider = NightModeDecider()
     private var reported = false
+    private var running = false
 
     fun start() {
         val sensor = lightSensor ?: return
         decider = NightModeDecider()
         reported = false
+        running = true
         sensorManager?.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
     fun stop() {
+        running = false
         sensorManager?.unregisterListener(this)
         handler.removeCallbacks(evaluateRunnable)
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type != Sensor.TYPE_LIGHT) return
+        // An event already queued when stop() ran can still be delivered.
+        if (!running || event.sensor.type != Sensor.TYPE_LIGHT) return
         decider.onSample(event.values[0], SystemClock.elapsedRealtime())
         evaluate()
     }
@@ -51,6 +53,7 @@ class NightModeController(
     // The sensor only reports changes, so a pending switch is completed by
     // the clock: re-check when the decider's dwell runs out.
     private fun evaluate() {
+        if (!running) return
         val now = SystemClock.elapsedRealtime()
         val state = decider.stateAt(now)
         if (state != reported) {

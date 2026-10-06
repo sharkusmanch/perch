@@ -43,7 +43,8 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
         Color.colorToHSV(accentColor, hsv)
         val baseHue = hsv[0]
         val amplitude = DRIFT_DP * density
-        val t = SystemClock.uptimeMillis() / 1000f
+        // Double: a Float loses sub-second precision after days of uptime.
+        val t = SystemClock.uptimeMillis() / 1000.0
 
         var x = (width - refWidth * scale) / 2f
         val baseline = (height + refDigitHeight * scale) / 2f
@@ -53,8 +54,8 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
             hsv[1] = SATURATION
             hsv[2] = 1f
             paint.color = Color.HSVToColor(hsv)
-            val dx = sin(t * 0.5f + i * 1.7f) * amplitude
-            val dy = cos(t * 0.4f + i * 2.3f) * amplitude
+            val dx = sin(t * 0.5 + i * 1.7).toFloat() * amplitude
+            val dy = cos(t * 0.4 + i * 2.3).toFloat() * amplitude
             canvas.drawText(ch, x + dx, baseline + dy, paint)
             x += paint.measureText(ch)
         }

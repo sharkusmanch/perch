@@ -8,7 +8,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -114,13 +113,8 @@ class WidgetHostManager private constructor(
         nightMode = false
     }
 
-    /** Whether any current slot has a widget assigned. */
-    fun hasAnyWidget(): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return (0 until slotCount).any {
-            prefs.getInt("${PREFS_KEY_SLOT_PREFIX}${it}_id", -1) != -1
-        }
-    }
+    /** Whether any slot is showing a widget. Only meaningful after start(). */
+    fun hasBoundWidget(): Boolean = hostViews.any { it != null }
 
     /** Night Mode needs pure black behind widgets; the usual grey would glow red. */
     fun setNightMode(on: Boolean) {
@@ -288,7 +282,7 @@ class WidgetHostManager private constructor(
                 if (isLandscape) lp.marginEnd = spacingPx
                 else lp.bottomMargin = spacingPx
             }
-            val slotContainer = FrameLayout(context).apply {
+            val slotContainer = WidgetSlotLayout(context).apply {
                 layoutParams = lp
                 clipToOutline = true
             }
@@ -299,8 +293,10 @@ class WidgetHostManager private constructor(
     }
 
     private fun applySlotBackground(slot: FrameLayout) {
-        if (nightMode) slot.setBackgroundColor(Color.BLACK)
-        else slot.setBackgroundResource(R.drawable.widget_slot_background)
+        slot.setBackgroundResource(
+            if (nightMode) R.drawable.widget_slot_background_night
+            else R.drawable.widget_slot_background
+        )
     }
 
     private fun bindAllWidgets() {

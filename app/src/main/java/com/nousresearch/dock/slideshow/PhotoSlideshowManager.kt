@@ -51,6 +51,7 @@ class PhotoSlideshowManager private constructor(
     private var isFrontShowing = true
     private var isCycling = false
     private var intervalMillis = 60000L // default 1 minute
+    private var consecutiveFailures = 0
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -75,6 +76,7 @@ class PhotoSlideshowManager private constructor(
     fun setPhotoUris(uris: List<Uri>) {
         photoUris = uris
         currentIndex = 0
+        consecutiveFailures = 0
     }
 
     fun hasPhotos(): Boolean = photoUris.isNotEmpty()
@@ -139,11 +141,18 @@ class PhotoSlideshowManager private constructor(
         val uri = photoUris[currentIndex]
         val targetView = if (isFrontShowing) backImageView else frontImageView
 
+        // Decode at screen size: a full-resolution camera photo can be too
+        // large a bitmap to draw at all.
+        val metrics = context.resources.displayMetrics
+        val width = targetView?.width?.takeIf { it > 0 } ?: metrics.widthPixels
+        val height = targetView?.height?.takeIf { it > 0 } ?: metrics.heightPixels
+
         Glide.with(context)
             .load(uri)
             .centerCrop()
-            .into(object : CustomTarget<Drawable>() {
+            .into(object : CustomTarget<Drawable>(width, height) {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                    consecutiveFailures = 0
                     // The dream may have stopped, or rebuilt its views, while this loaded.
                     val stillTarget = if (isFrontShowing) backImageView else frontImageView
                     if (targetView == null || targetView !== stillTarget) return
@@ -153,6 +162,17 @@ class PhotoSlideshowManager private constructor(
                         visibility = View.VISIBLE
                     }
                     crossfadeViews()
+                }
+
+                // A deleted photo, or one whose permission was revoked: try
+                // the next, giving up once every photo has failed in a row.
+                override fun onLoadFailed(errorDrawable: Drawable?) {
+                    if (frontImageView == null) return
+                    consecutiveFailures++
+                    if (consecutiveFailures < photoUris.size) {
+                        currentIndex = (currentIndex + 1) % photoUris.size
+                        loadCurrentPhoto()
+                    }
                 }
 
                 override fun onLoadCleared(placeholder: Drawable?) {}

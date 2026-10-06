@@ -50,7 +50,10 @@ class DockDreamService : DreamService() {
     private var pages: List<DreamPage> = emptyList()
 
     private var dreaming = false
+    private var builtOrientation = Configuration.ORIENTATION_UNDEFINED
     private var batteryReceiver: BroadcastReceiver? = null
+    // Kept so a rebuilt view (rotation) shows the level without waiting for the next broadcast.
+    private var batteryText: CharSequence = ""
 
     // Night Mode
     private var nightController: NightModeController? = null
@@ -99,8 +102,13 @@ class DockDreamService : DreamService() {
         super.onConfigurationChanged(newConfig)
 
         // The system can deliver this before onAttachedToWindow() has ever
-        // run (initial dream-window launch). There is nothing to rebuild yet.
-        if (root == null) return
+        // run (initial dream-window launch), or after the dream window has
+        // gone. There is nothing to rebuild then.
+        if (root == null || window == null) return
+
+        // Theme, locale and font-scale changes arrive here too; only a
+        // rotation needs the pages rebuilt.
+        if (newConfig.orientation == builtOrientation) return
 
         if (dreaming) stopPages()
         buildContent(newConfig.orientation)
@@ -135,6 +143,7 @@ class DockDreamService : DreamService() {
 
     /** Inflates the root and builds the three pages. */
     private fun buildContent(orientation: Int) {
+        builtOrientation = orientation
         setContentView(R.layout.dream_dock)
         val root = findViewById<DreamRootLayout>(R.id.dream_root)
         val pager = findViewById<ViewPager2>(R.id.dream_pager)
@@ -170,6 +179,7 @@ class DockDreamService : DreamService() {
 
         val showBattery = prefs.getBoolean(getString(R.string.pref_key_battery_enabled), true)
         batteryStatus?.visibility = if (showBattery) View.VISIBLE else View.GONE
+        batteryStatus?.text = batteryText
     }
 
     private fun stopPages() {
@@ -250,7 +260,8 @@ class DockDreamService : DreamService() {
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
                 val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
                 if (pct >= 0) {
-                    batteryStatus?.text = "$pct%"
+                    batteryText = "$pct%"
+                    batteryStatus?.text = batteryText
                 }
             }
         }

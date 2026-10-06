@@ -18,10 +18,11 @@ class WidgetsPage(context: Context, private val isLandscape: Boolean) : DreamPag
 
     override fun attach() {
         manager.init(container, isLandscape)
-        val hasWidgets = manager.hasAnyWidget()
+        manager.start()
+        // Decided after binding: a slot whose app was uninstalled binds nothing.
+        val hasWidgets = manager.hasBoundWidget()
         container.visibility = if (hasWidgets) View.VISIBLE else View.GONE
         hint.visibility = if (hasWidgets) View.GONE else View.VISIBLE
-        manager.start()
     }
 
     override fun detach() {
