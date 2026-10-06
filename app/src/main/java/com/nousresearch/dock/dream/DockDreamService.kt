@@ -107,11 +107,13 @@ class DockDreamService : DreamService() {
         if (root == null || window == null) return
 
         // Theme, locale and font-scale changes arrive here too; only a
-        // rotation needs the pages rebuilt.
-        if (newConfig.orientation == builtOrientation) return
+        // rotation needs the pages rebuilt. Compared by physical rotation,
+        // the same source the first build used.
+        val orientation = currentPhysicalOrientation()
+        if (orientation == builtOrientation) return
 
         if (dreaming) stopPages()
-        buildContent(newConfig.orientation)
+        buildContent(orientation)
         if (dreaming) startPages()
         applyNightMode(animate = false)
     }

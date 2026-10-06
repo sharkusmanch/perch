@@ -1,3 +1,21 @@
+# Dock StandBy
+
+> **This is a personal fork of [Mobinshahidi/Dock](https://github.com/Mobinshahidi/Dock)** (Apache 2.0),
+> reshaped to behave like iOS StandBy. It installs alongside the original as
+> `io.github.sharkusmanch.dock`.
+>
+> What differs from upstream:
+> - **Three pages, swiped sideways:** Widgets, Photos, Clock.
+> - **Three clock faces, swiped up/down:** Digital, Analog, Float. These replace the original six styles.
+> - **Night Mode:** when the room is dark the whole screen dims and turns red, driven by the light sensor. This replaces the scheduled night dim.
+> - **Double-tap** the Photos or Clock page to leave the screensaver.
+> - Widgets are display-only while the phone is locked.
+>
+> The rest of this README is upstream's and describes the original app; its
+> feature list and screenshots do not match this fork.
+
+---
+
 # Dock — Minimal Futuristic Charging Screensaver for Android
 
 <p align="center">

@@ -91,8 +91,13 @@ class NightModeDeciderTest {
 
     @Test
     fun thresholdsAreExclusive() {
-        val atEnter = NightModeDecider().apply { onSample(5f, 0) }
-        assertFalse(atEnter.stateAt(0))
+        val firstAtEnter = NightModeDecider().apply { onSample(5f, 0) }
+        assertFalse(firstAtEnter.stateAt(0))
+
+        val atEnter = NightModeDecider()
+        atEnter.onSample(100f, 0)
+        atEnter.onSample(5f, 1000)
+        assertFalse(atEnter.stateAt(60_000))
 
         val atExit = NightModeDecider()
         atExit.onSample(1f, 0)

@@ -167,7 +167,8 @@ class PhotoSlideshowManager private constructor(
                 // A deleted photo, or one whose permission was revoked: try
                 // the next, giving up once every photo has failed in a row.
                 override fun onLoadFailed(errorDrawable: Drawable?) {
-                    if (frontImageView == null) return
+                    val stillTarget = if (isFrontShowing) backImageView else frontImageView
+                    if (targetView == null || targetView !== stillTarget) return
                     consecutiveFailures++
                     if (consecutiveFailures < photoUris.size) {
                         currentIndex = (currentIndex + 1) % photoUris.size

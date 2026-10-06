@@ -95,8 +95,10 @@ checks and the `widgets_enabled` gate that makes the container visible
 replaced by "always visible, fill the page". Its static references to dream
 views are cleared in `detach()`. Because the dream is interactive and shows
 over the lock screen, widgets are display-only while the device is locked
-(`KeyguardManager.isDeviceLocked`): each slot intercepts touches so a widget's
-buttons cannot be pressed without unlocking. When the device is unlocked,
+(`KeyguardManager.isDeviceLocked`): each slot (`WidgetSlotLayout`) withholds
+touch, mouse, and key input from its widget, never lets keyboard focus in, and
+hides the widget from accessibility services, so its buttons cannot be pressed
+without unlocking. Swipes that start on a widget still change page. When the device is unlocked,
 tapping a widget fires its click action, which usually opens that app and ends
 the dream. In landscape the slots sit side by side
 (horizontal), in portrait stacked (vertical) — the reverse of the current rail

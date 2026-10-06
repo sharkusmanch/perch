@@ -82,6 +82,8 @@ class WidgetHostManager private constructor(
         this.widgetRail = widgetRail
         this.viewContext = widgetRail.context.applicationContext
         this.currentIsLandscape = isLandscape
+        // Settings may have left host views from binding in this process.
+        hostViews.fill(null)
         loadPersistedState()
         createSlotViews()
     }
@@ -114,7 +116,7 @@ class WidgetHostManager private constructor(
     }
 
     /** Whether any slot is showing a widget. Only meaningful after start(). */
-    fun hasBoundWidget(): Boolean = hostViews.any { it != null }
+    fun hasBoundWidget(): Boolean = (0 until slotCount).any { hostViews[it] != null }
 
     /** Night Mode needs pure black behind widgets; the usual grey would glow red. */
     fun setNightMode(on: Boolean) {
