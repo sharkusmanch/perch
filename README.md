@@ -85,7 +85,29 @@ Settings follow your phone's light/dark mode and, on Android 12 and later, its w
 
 ## Install
 
-There are no packaged releases yet. To build and install it yourself you need a JDK (17 or 21) and the Android SDK with platform 34:
+<p>
+  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/sharkusmanch/perch"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
+  <a href="https://github.com/sharkusmanch/perch/releases/latest"><img src="https://img.shields.io/github/v/release/sharkusmanch/perch?label=Latest%20release&style=for-the-badge" alt="Latest release" height="56"></a>
+</p>
+
+- **Obtainium:** tap the badge on your phone to add Perch, and Obtainium will keep it updated.
+- **Manually:** download the APK from the [latest release](https://github.com/sharkusmanch/perch/releases/latest) and open it on your phone.
+
+### Verify a download
+
+Every release APK is built and signed by this repository's [release workflow](.github/workflows/release.yml). To check a file you downloaded:
+
+```sh
+sha256sum --check perch-<version>.apk.sha256
+gh attestation verify perch-<version>.apk -R sharkusmanch/perch
+```
+
+Releases are signed with a certificate whose SHA-256 fingerprint is
+`c28ad1e8d618108cfa26edf8de59b600644c91712d46c3b38d5eb6c8f297bee8`.
+
+### Build from source
+
+You need a JDK (17 or 21) and the Android SDK with platform 34:
 
 ```sh
 git clone https://github.com/sharkusmanch/perch.git
@@ -93,6 +115,8 @@ cd perch
 ./gradlew assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
+
+A build you make yourself is signed with your own debug key, so it cannot be installed over a release APK or the other way round.
 
 Perch installs as `io.github.sharkusmanch.dock`, so it can sit alongside the original Dock.
 
