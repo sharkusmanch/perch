@@ -1,11 +1,17 @@
 name: Release
 
 # Pushing a tag vX.Y.Z builds, signs, attests and publishes that version.
-# Running it by hand does everything except publish, as a rehearsal.
+#
+# The checks inside this file are conveniences, not the security boundary:
+# whoever can push a tag also controls this file at that commit. The gates
+# that hold are set on the repository, outside the workflow:
+#   - a ruleset allows only repository admins to create v* tags, and nobody
+#     to move or delete them;
+#   - the "release" environment, which holds the signing key, is limited to
+#     v* tags and waits for a named reviewer to approve each run.
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
 
 permissions: {}
 
@@ -14,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Holds the signing key. Its token can only read the repository and
-  # write attestations; it cannot create a release.
+  # Holds the signing key and runs the build. Its token can only read the
+  # repository: it cannot attest or create a release.
   build:
     name: Build and sign
     runs-on: ubuntu-24.04
@@ -23,8 +29,6 @@ jobs:
     environment: release
     permissions:
       contents: read
-      id-token: write # proves this workflow's identity when signing the attestation
-      attestations: write # stores the build provenance attestation
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -46,16 +50,14 @@ jobs:
             echo "::error::Could not read versionName from app/build.gradle.kts"
             exit 1
           fi
-          if [ "$REF_TYPE" = "tag" ]; then
-            if [ "$REF_NAME" != "v$version" ]; then
-              echo "::error::Tag $REF_NAME does not match versionName $version"
-              exit 1
-            fi
-            # Only release commits that are on main.
-            if ! git merge-base --is-ancestor HEAD origin/main; then
-              echo "::error::Tagged commit is not on main"
-              exit 1
-            fi
+          if [ "$REF_TYPE" != "tag" ] || [ "$REF_NAME" != "v$version" ]; then
+            echo "::error::Ref $REF_NAME does not match versionName $version"
+            exit 1
+          fi
+          # Only release commits that are on main.
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::Tagged commit is not on main"
+            exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -106,12 +108,6 @@ jobs:
           (cd dist && sha256sum "perch-$VERSION.apk" > "perch-$VERSION.apk.sha256")
           cat dist/*.sha256
 
-      # Signed statement that this exact file was built by this workflow from this commit.
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: dist/*.apk
-
       - name: Upload release files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -120,12 +116,35 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  # Records a signed statement that this exact file was built by this workflow
+  # from this commit. Kept apart from the build so that no build script or
+  # dependency ever runs with the right to issue attestations.
+  attest:
+    name: Attest provenance
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write # proves this workflow's identity when signing the attestation
+      attestations: write # stores the build provenance attestation
+
+    steps:
+      - name: Download release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: perch-release
+          path: dist
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*.apk
+
   # Publishes the files the build job produced. It can write releases but
   # never sees the signing key and runs no code from the repository.
   publish:
     name: Publish GitHub release
-    needs: build
-    if: github.ref_type == 'tag'
+    needs: [build, attest]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
