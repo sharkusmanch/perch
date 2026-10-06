@@ -4,7 +4,6 @@
     <string name="settings_title">Dock StandBy Settings</string>
 
     <!-- Preference keys -->
-    <string name="pref_key_app_theme">app_theme</string>
     <string name="pref_key_oled_mode">oled_mode</string>
     <string name="pref_key_night_mode">night_mode_enabled</string>
     <string name="pref_key_battery_enabled">battery_enabled</string>
@@ -17,10 +16,12 @@
 
     <!-- Display section -->
     <string name="section_display">Display</string>
-    <string name="pref_app_theme_title">App theme</string>
     <string
-        name="pref_app_theme_summary"
-    >Light, dark, or match your phone’s system theme (Settings app only)</string>
+        name="pref_open_dream_settings_title"
+    >Preview and screen saver setup</string>
+    <string
+        name="pref_open_dream_settings_summary"
+    >Open the system screen saver page to select or preview Dock StandBy</string>
     <string name="pref_oled_title">OLED pure-black background</string>
     <string
         name="pref_oled_summary"
@@ -43,6 +44,10 @@
     <string
         name="pref_clock_24h_summary"
     >Show 24-hour time (14:30) instead of 12-hour (2:30)</string>
+    <string name="face_digital">Digital</string>
+    <string name="face_analog">Analog</string>
+    <string name="face_float">Float</string>
+    <string name="color_picker_custom">Custom color (hex)</string>
     <string name="pref_face_color_digital_title">Digital face color</string>
     <string
         name="pref_face_color_digital_summary"
@@ -69,27 +74,23 @@
     <!-- Widgets section -->
     <string name="section_widgets">Widgets</string>
     <string name="widget_slot_count">Number of slots</string>
-    <string name="widget_manage_slot">Manage slot</string>
+    <string name="widget_slot_title">Slot %d</string>
+    <string name="widget_slot_size_title">Slot %d size</string>
     <string name="widget_pick_for_slot">Tap to pick a widget</string>
+    <string name="widget_change">Change widget</string>
+    <string name="widget_remove">Remove widget</string>
     <string name="widget_picker_title">Choose widget</string>
     <string name="widget_picker_empty">No widgets available</string>
-    <string name="pref_slot_size_title">Slot size</string>
-    <string
-        name="pref_slot_size_summary"
-    >Share of the page this slot takes</string>
     <string
         name="widgets_page_hint"
     >No widgets yet.\nAdd some in Dock StandBy settings.</string>
 
-    <!-- Auto-start -->
-    <string name="section_autostart">Auto-start</string>
-    <string name="pref_autostart_title">Enable auto-start on charge</string>
+    <!-- Setup -->
+    <string name="section_setup">Setup</string>
+    <string name="pref_autostart_title">Start automatically while charging</string>
     <string
         name="pref_autostart_summary"
-    >Tap for setup steps. Must: (1) select Dock StandBy as screen saver, (2) set \"When to start\" to \"While charging\", (3) battery = Unrestricted, (4) disable Battery Saver when testing.</string>
-
-    <!-- About -->
-    <string name="section_about">About</string>
+    >Steps to make the screen saver start on its own</string>
     <string name="about_license">Open source — Apache 2.0</string>
     <string
         name="about_summary"

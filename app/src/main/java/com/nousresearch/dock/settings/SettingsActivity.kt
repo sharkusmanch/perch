@@ -10,25 +10,30 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
-import android.os.Bundle
-import android.graphics.Rect
-import android.view.View
-import android.widget.Toast
-import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.net.Uri
+import android.os.Bundle
 import android.provider.Settings
+import android.view.View
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
+import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.DynamicColors
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.nousresearch.dock.R
 import com.nousresearch.dock.dream.DockDreamService
 import com.nousresearch.dock.dream.DreamPrefs
@@ -36,40 +41,27 @@ import com.nousresearch.dock.slideshow.PhotoSlideshowManager
 import com.nousresearch.dock.widget.WidgetHostManager
 
 /**
- * Dock settings activity.
+ * Dock settings activity — a Material 3 screen of grouped cards.
  *
- * - Display: settings theme, OLED background, Night Mode.
- * - Clock: 24-hour format and one colour per clock face.
+ * - Display: Night Mode, OLED background, battery level.
+ * - Clock: live face previews, 24-hour format and one colour per clock face.
  * - Photos: picker using the system picker (no broad storage permission) and interval.
  * - Widgets: slot count + per-slot widget picker via AppWidgetHost.
  */
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Must run before super.onCreate() so the correct day/night resources
-        // (see values/themes.xml + values-night/themes.xml) are already
-        // active when this activity's window/theme is resolved.
-        applyPersistedNightMode(this)
+        // Wallpaper-based colors on Android 12+; must be applied before the theme is used.
+        DynamicColors.applyToActivityIfAvailable(this)
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_settings)
 
-        supportFragmentManager
-            .beginTransaction()
-            .replace(android.R.id.content, DockSettingsFragment())
-            .commit()
-    }
-
-    companion object {
-        /** Maps the persisted "App theme" pref (system/light/dark) to an AppCompatDelegate night mode. */
-        fun nightModeFor(themePref: String): Int = when (themePref) {
-            "light" -> AppCompatDelegate.MODE_NIGHT_NO
-            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-
-        fun applyPersistedNightMode(ctx: Context) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
-            val themePref = prefs.getString(ctx.getString(R.string.pref_key_app_theme), "system") ?: "system"
-            AppCompatDelegate.setDefaultNightMode(nightModeFor(themePref))
+        if (savedInstanceState == null) {
+            supportFragmentManager
+                .beginTransaction()
+                .replace(R.id.settings_container, DockSettingsFragment())
+                .commit()
         }
     }
 
@@ -101,29 +93,44 @@ class SettingsActivity : AppCompatActivity() {
                 pendingWidgetSlot = -1
                 pendingWidgetId = -1
                 pendingWidgetProvider = null
+                updateSlotRows(currentSlotCount())
             }
 
-        // Ensures at least 10dp of breathing room between every preference row
-        // (name/icon + summary) and the next, most noticeably in the Widgets
-        // section where users pick/manage widgets per slot.
-        override fun onCreateRecyclerView(
-            inflater: android.view.LayoutInflater,
-            parent: android.view.ViewGroup,
-            savedInstanceState: Bundle?
-        ): RecyclerView {
-            val recyclerView = super.onCreateRecyclerView(inflater, parent, savedInstanceState)
-            val minGapPx = (10 * resources.displayMetrics.density).toInt()
-            recyclerView.addItemDecoration(object : RecyclerView.ItemDecoration() {
-                override fun getItemOffsets(
-                    outRect: Rect,
-                    view: View,
-                    parent: RecyclerView,
-                    state: RecyclerView.State
-                ) {
-                    outRect.bottom = minGapPx
+        // The face previews show the colors and time format, so follow those settings.
+        private val previewRefreshKeys: Set<String> by lazy {
+            setOf(
+                getString(R.string.pref_key_clock_24h),
+                getString(R.string.pref_key_face_color_digital),
+                getString(R.string.pref_key_face_color_analog),
+                getString(R.string.pref_key_face_color_float)
+            )
+        }
+
+        private val prefChangeListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key != null && key in previewRefreshKeys) {
+                    findPreference<FacePreviewPreference>("face_preview")?.refresh()
                 }
-            })
-            return recyclerView
+            }
+
+        override fun onCreateAdapter(preferenceScreen: PreferenceScreen): RecyclerView.Adapter<*> =
+            CardPreferenceAdapter(preferenceScreen)
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // Cards separate the rows; no divider lines.
+            setDivider(null)
+
+            // Edge to edge: keep the last card clear of the navigation bar and cutouts.
+            val bottomGap = (24 * resources.displayMetrics.density).toInt()
+            listView.clipToPadding = false
+            ViewCompat.setOnApplyWindowInsetsListener(listView) { list, insets ->
+                val bars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+                )
+                list.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom + bottomGap)
+                insets
+            }
         }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -132,18 +139,14 @@ class SettingsActivity : AppCompatActivity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
             val context = requireContext()
 
-            // --- App theme (Settings app UI only; the dream stays dark) ---
-            findPreference<ListPreference>(getString(R.string.pref_key_app_theme))
-                ?.setOnPreferenceChangeListener { _, newValue ->
-                    val themePref = newValue as? String ?: "system"
-                    AppCompatDelegate.setDefaultNightMode(SettingsActivity.nightModeFor(themePref))
-                    activity?.recreate()
-                    true
-                }
+            // --- Preview / select as screen saver ---
+            findPreference<Preference>("open_dream_settings")?.setOnPreferenceClickListener {
+                openDreamSettings()
+                true
+            }
 
             // --- Pick photos preference ---
-            val pickPhotosPref = findPreference<Preference>("pick_photos")
-            pickPhotosPref?.setOnPreferenceClickListener {
+            findPreference<Preference>("pick_photos")?.setOnPreferenceClickListener {
                 launchPhotoPicker()
                 true
             }
@@ -163,27 +166,30 @@ class SettingsActivity : AppCompatActivity() {
             slotCountPref?.setOnPreferenceChangeListener { _, newValue ->
                 val count = (newValue as String).toIntOrNull() ?: 1
                 WidgetHostManager.getInstance(context).setSlotCount(count)
-                updateSlotManageVisibility(count)
+                updateSlotRows(count)
                 true
             }
-            val currentSlotCount = prefs.getString(getString(R.string.pref_key_widget_slot_count), "1")?.toIntOrNull() ?: 1
-            updateSlotManageVisibility(currentSlotCount)
+            updateSlotRows(currentSlotCount())
 
             // Per-slot widget pickers
             for (i in 1..3) {
-                val key = "manage_slot_$i"
-                findPreference<Preference>(key)?.setOnPreferenceClickListener {
-                    launchWidgetPicker(i - 1)
+                findPreference<Preference>("manage_slot_$i")?.setOnPreferenceClickListener {
+                    onSlotClicked(i - 1)
                     true
                 }
             }
 
             // Per-slot size
             for (i in 1..3) {
-                val key = "slot_size_$i"
-                findPreference<ListPreference>(key)?.setOnPreferenceChangeListener { _, _ ->
-                    WidgetHostManager.getInstance(context).notifySlotSizeChanged()
-                    true
+                findPreference<ListPreference>("slot_size_$i")?.apply {
+                    title = getString(R.string.widget_slot_size_title, i)
+                    // Earlier versions saved an empty value meaning "medium".
+                    if (value.isNullOrEmpty()) value = "medium"
+                    setOnPreferenceChangeListener { _, _ ->
+                        // The new value is persisted only after this returns.
+                        view?.post { WidgetHostManager.getInstance(context).notifySlotSizeChanged() }
+                        true
+                    }
                 }
             }
 
@@ -197,58 +203,9 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
-            // ===== Clock face colours =====
-            val faceColors = listOf(
-                Triple(R.string.pref_key_face_color_digital, DreamPrefs.DEFAULT_COLOR_DIGITAL, R.string.pref_face_color_digital_title),
-                Triple(R.string.pref_key_face_color_analog, DreamPrefs.DEFAULT_COLOR_ANALOG, R.string.pref_face_color_analog_title),
-                Triple(R.string.pref_key_face_color_float, DreamPrefs.DEFAULT_COLOR_FLOAT, R.string.pref_face_color_float_title)
-            )
-            for ((keyRes, defaultHex, titleRes) in faceColors) {
-                val key = getString(keyRes)
-                findPreference<Preference>(key)?.setOnPreferenceClickListener {
-                    val ctx = requireContext()
-                    val p = PreferenceManager.getDefaultSharedPreferences(ctx)
-                    showFullColorPicker(ctx, p, key, getString(titleRes), DreamPrefs.color(p, key, defaultHex))
-                    true
-                }
-            }
-
-            // Auto-start guide — open system dream settings + ADB commands
+            // Auto-start guide — steps plus the ADB commands for when they are not enough
             findPreference<Preference>("auto_start_guide")?.setOnPreferenceClickListener {
-                val ctx = requireContext()
-                val appName = getString(R.string.app_name)
-                val component = ComponentName(ctx, DockDreamService::class.java).flattenToString()
-                val commands = """
-                    |adb shell settings put secure screensaver_enabled 1
-                    |adb shell settings put secure screensaver_components $component
-                    |adb shell settings put secure screensaver_activate_on_dock 1
-                """.trimMargin()
-                val message = buildString {
-                    appendLine("Enable $appName as your screen saver:")
-                    appendLine()
-                    appendLine("1. Tap \"Open Settings\" below and select $appName.")
-                    appendLine("2. Set \"When to start\" → \"While charging\".")
-                    appendLine("3. Grant Unrestricted battery.")
-                    appendLine("4. Disable Battery Saver when testing.")
-                    appendLine()
-                    appendLine("If the dream doesn't auto-start, run these ADB commands (one-time):")
-                    appendLine()
-                    append(commands)
-                }
-                AlertDialog.Builder(ctx)
-                    .setTitle("Auto-start setup")
-                    .setMessage(message)
-                    .setPositiveButton("Copy commands") { _, _ ->
-                        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("ADB commands", commands))
-                    }
-                    .setNeutralButton("Open Settings") { _, _ ->
-                        try {
-                            startActivity(Intent(Settings.ACTION_DREAM_SETTINGS))
-                        } catch (_: Exception) {}
-                    }
-                    .setNegativeButton("Close", null)
-                    .show()
+                showAutoStartGuide()
                 true
             }
 
@@ -265,11 +222,113 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        override fun onResume() {
+            super.onResume()
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .registerOnSharedPreferenceChangeListener(prefChangeListener)
+            // A widget's app may have been uninstalled while we were away.
+            updateSlotRows(currentSlotCount())
+        }
+
+        override fun onPause() {
+            super.onPause()
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .unregisterOnSharedPreferenceChangeListener(prefChangeListener)
+        }
+
+        /** Material single-choice dialogs for list settings instead of the framework's older style. */
+        override fun onDisplayPreferenceDialog(preference: Preference) {
+            if (preference !is ListPreference) {
+                super.onDisplayPreferenceDialog(preference)
+                return
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(preference.title)
+                .setSingleChoiceItems(
+                    preference.entries, preference.findIndexOfValue(preference.value)
+                ) { dialog, which ->
+                    val value = preference.entryValues[which].toString()
+                    if (preference.callChangeListener(value)) preference.value = value
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
+        private fun openDreamSettings() {
+            try {
+                startActivity(Intent(Settings.ACTION_DREAM_SETTINGS))
+            } catch (_: Exception) {}
+        }
+
+        private fun showAutoStartGuide() {
+            val ctx = requireContext()
+            val appName = getString(R.string.app_name)
+            val component = ComponentName(ctx, DockDreamService::class.java).flattenToString()
+            val commands = """
+                |adb shell settings put secure screensaver_enabled 1
+                |adb shell settings put secure screensaver_components $component
+                |adb shell settings put secure screensaver_activate_on_dock 1
+            """.trimMargin()
+            val message = buildString {
+                appendLine("Enable $appName as your screen saver:")
+                appendLine()
+                appendLine("1. Tap \"Open Settings\" below and select $appName.")
+                appendLine("2. Set \"When to start\" → \"While charging\".")
+                appendLine("3. Grant Unrestricted battery.")
+                appendLine("4. Disable Battery Saver when testing.")
+                appendLine()
+                appendLine("If the dream doesn't auto-start, run these ADB commands (one-time):")
+                appendLine()
+                append(commands)
+            }
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle("Auto-start setup")
+                .setMessage(message)
+                .setPositiveButton("Copy commands") { _, _ ->
+                    val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("ADB commands", commands))
+                }
+                .setNeutralButton("Open Settings") { _, _ -> openDreamSettings() }
+                .setNegativeButton("Close", null)
+                .show()
+        }
+
+        // ------------------------------------------------------------------
+        // Widgets
+        // ------------------------------------------------------------------
+
+        private fun currentSlotCount(): Int =
+            PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getString(getString(R.string.pref_key_widget_slot_count), "1")?.toIntOrNull() ?: 1
+
+        /** An empty slot goes straight to the picker; a filled one offers change or remove. */
+        private fun onSlotClicked(slotIndex: Int) {
+            val ctx = requireContext()
+            if (WidgetHostManager.getInstance(ctx).slotProvider(slotIndex) == null) {
+                launchWidgetPicker(slotIndex)
+                return
+            }
+            MaterialAlertDialogBuilder(ctx)
+                .setTitle(getString(R.string.widget_slot_title, slotIndex + 1))
+                .setItems(
+                    arrayOf(getString(R.string.widget_change), getString(R.string.widget_remove))
+                ) { _, which ->
+                    if (which == 0) {
+                        launchWidgetPicker(slotIndex)
+                    } else {
+                        WidgetHostManager.getInstance(ctx).removeWidget(slotIndex)
+                        updateSlotRows(currentSlotCount())
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
         /**
          * In-app widget chooser. Replaces the system ACTION_APPWIDGET_PICK dialog
          * (whose row layout/spacing we can't control) with our own list, styled
-         * to match the rest of Settings and with a guaranteed minimum 10dp gap
-         * between each widget row (icon + name).
+         * to match the rest of Settings.
          */
         private fun launchWidgetPicker(slotIndex: Int) {
             val ctx = requireContext()
@@ -282,21 +341,17 @@ class SettingsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 emptyList<AppWidgetProviderInfo>()
             }
-
-            val dp = ctx.resources.displayMetrics.density
-            val rowGap = (10 * dp).toInt()
-            showWidgetPickerDialog(ctx, slotIndex, providers, rowGap)
+            showWidgetPickerDialog(ctx, slotIndex, providers)
         }
 
         private fun showWidgetPickerDialog(
             ctx: Context,
             slotIndex: Int,
-            providers: List<AppWidgetProviderInfo>,
-            rowGap: Int
+            providers: List<AppWidgetProviderInfo>
         ) {
             val pm = ctx.packageManager
             val dp = ctx.resources.displayMetrics.density
-            val outerPadding = (16 * dp).toInt()
+            val outerPadding = (12 * dp).toInt()
             val rowPadding = (12 * dp).toInt()
             val iconSize = (40 * dp).toInt()
 
@@ -315,13 +370,9 @@ class SettingsActivity : AppCompatActivity() {
 
             lateinit var dialog: AlertDialog
 
-            for ((index, info) in providers.withIndex()) {
+            for (info in providers) {
                 val label = try { info.loadLabel(pm) } catch (e: Exception) { info.provider.flattenToShortString() }
-                val icon: android.graphics.drawable.Drawable? = try {
-                    info.loadIcon(ctx, ctx.resources.displayMetrics.densityDpi)
-                } catch (e: Exception) {
-                    try { pm.getApplicationIcon(info.provider.packageName) } catch (e2: Exception) { null }
-                }
+                val icon = loadProviderIcon(ctx, info)
 
                 val outValue = android.util.TypedValue()
                 ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
@@ -336,10 +387,7 @@ class SettingsActivity : AppCompatActivity() {
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                         android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { lp ->
-                        // Guarantee at least 10dp of space before the next row.
-                        if (index < providers.size - 1) lp.setMargins(0, 0, 0, rowGap)
-                    }
+                    )
                 }
 
                 row.addView(android.widget.ImageView(ctx).apply {
@@ -349,7 +397,7 @@ class SettingsActivity : AppCompatActivity() {
 
                 row.addView(android.widget.TextView(ctx).apply {
                     text = label
-                    textSize = 15f
+                    setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge)
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
                     ).also { it.setMargins((16 * dp).toInt(), 0, 0, 0) }
@@ -363,13 +411,20 @@ class SettingsActivity : AppCompatActivity() {
                 list.addView(row)
             }
 
-            dialog = AlertDialog.Builder(ctx)
+            dialog = MaterialAlertDialogBuilder(ctx)
                 .setTitle(getString(R.string.widget_picker_title))
                 .setView(scroll)
                 .setNegativeButton(getString(android.R.string.cancel), null)
                 .create()
             dialog.show()
         }
+
+        private fun loadProviderIcon(ctx: Context, info: AppWidgetProviderInfo): android.graphics.drawable.Drawable? =
+            try {
+                info.loadIcon(ctx, ctx.resources.displayMetrics.densityDpi)
+            } catch (e: Exception) {
+                try { ctx.packageManager.getApplicationIcon(info.provider.packageName) } catch (e2: Exception) { null }
+            }
 
         /** Binds the chosen widget provider to [slotIndex], requesting the ACTION_APPWIDGET_BIND permission if needed. */
         private fun bindWidgetFromCustomPicker(slotIndex: Int, info: AppWidgetProviderInfo) {
@@ -387,6 +442,7 @@ class SettingsActivity : AppCompatActivity() {
 
             if (bound) {
                 manager.finalizeWidgetBinding(slotIndex, appWidgetId, info.provider)
+                updateSlotRows(currentSlotCount())
             } else {
                 pendingWidgetSlot = slotIndex
                 pendingWidgetId = appWidgetId
@@ -398,16 +454,38 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        private fun updateSlotManageVisibility(count: Int) {
-            for (i in 1..3) {
-                val pref = findPreference<Preference>("manage_slot_$i")
-                pref?.isVisible = (i <= count)
-                val sizePref = findPreference<Preference>("slot_size_$i")
-                sizePref?.isVisible = (i <= count)
+        /** Shows the rows for [count] slots, each with its widget's name and icon. */
+        private fun updateSlotRows(count: Int) {
+            val ctx = context ?: return
+            val manager = WidgetHostManager.getInstance(ctx)
+            val installed = try {
+                AppWidgetManager.getInstance(ctx).installedProviders
+            } catch (e: Exception) {
+                emptyList<AppWidgetProviderInfo>()
             }
-            findPreference<androidx.preference.PreferenceCategory>("spacer_after_slot1")?.isVisible = (count >= 2)
-            findPreference<androidx.preference.PreferenceCategory>("spacer_after_slot2")?.isVisible = (count >= 3)
+
+            for (i in 1..3) {
+                findPreference<Preference>("slot_size_$i")?.isVisible = (i <= count)
+                val row = findPreference<Preference>("manage_slot_$i") ?: continue
+                row.isVisible = (i <= count)
+                row.title = getString(R.string.widget_slot_title, i)
+
+                val provider = manager.slotProvider(i - 1)
+                val info = provider?.let { p -> installed.firstOrNull { it.provider == p } }
+                if (info != null) {
+                    row.summary = try { info.loadLabel(ctx.packageManager) } catch (e: Exception) { provider.flattenToShortString() }
+                    row.icon = loadProviderIcon(ctx, info)
+                        ?: AppCompatResources.getDrawable(ctx, R.drawable.ic_widgets)
+                } else {
+                    row.summary = getString(R.string.widget_pick_for_slot)
+                    row.icon = AppCompatResources.getDrawable(ctx, R.drawable.ic_widgets)
+                }
+            }
         }
+
+        // ------------------------------------------------------------------
+        // Photos
+        // ------------------------------------------------------------------
 
         private fun launchPhotoPicker() {
             pickPhotosLauncher.launch(arrayOf("image/*"))
@@ -429,7 +507,7 @@ class SettingsActivity : AppCompatActivity() {
             val uriString = uris.map { it.toString() }.joinToString("|")
             PreferenceManager.getDefaultSharedPreferences(context)
                 .edit()
-                .putString("slideshow_photo_uris", uriString)
+                .putString(DreamPrefs.KEY_PHOTO_URIS, uriString)
                 .apply()
 
             // Notify slideshow manager
@@ -446,137 +524,9 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         private fun updatePickPhotosSummaryFromPrefs(prefs: SharedPreferences) {
-            val uriString = prefs.getString("slideshow_photo_uris", "") ?: ""
+            val uriString = prefs.getString(DreamPrefs.KEY_PHOTO_URIS, "") ?: ""
             val count = if (uriString.isNotEmpty()) uriString.split("|").size else 0
             updatePickPhotosSummary(count)
         }
-
-        /** Full RGB + hex color picker dialog. Writes the chosen color to [prefKey] as "#RRGGBB". */
-        private fun showFullColorPicker(
-            ctx: Context, prefs: SharedPreferences,
-            prefKey: String, title: String, initial: Int
-        ) {
-            val dp = ctx.resources.displayMetrics.density
-            val padding = (16 * dp).toInt()
-            val root = android.widget.LinearLayout(ctx).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setPadding(padding, padding, padding, 0)
-            }
-
-            val preview = View(ctx).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT, (80 * dp).toInt()
-                ).also { it.setMargins(0, 0, 0, padding) }
-                setBackgroundColor(initial)
-            }
-            root.addView(preview)
-
-            val hexRow = android.widget.LinearLayout(ctx).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.setMargins(0, 0, 0, 0) }
-            }
-            hexRow.addView(android.widget.TextView(ctx).apply {
-                text = "#"
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    (24 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                textSize = 16f
-                gravity = android.view.Gravity.CENTER_VERTICAL
-            })
-            val hexInput = android.widget.EditText(ctx).apply {
-                setText(String.format("%06X", initial and 0xFFFFFF))
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                )
-                filters = arrayOf(android.text.InputFilter.LengthFilter(6))
-                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                addTextChangedListener(object : android.text.TextWatcher {
-                    override fun afterTextChanged(s: android.text.Editable?) {}
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        val hex = s?.toString()?.trim()?.removePrefix("#") ?: return
-                        if (hex.length != 6) return
-                        val color = try { Color.parseColor("#$hex") } catch (e: Exception) { return }
-                        root.findViewWithTag<android.widget.SeekBar>("R")?.progress = Color.red(color)
-                        root.findViewWithTag<android.widget.SeekBar>("G")?.progress = Color.green(color)
-                        root.findViewWithTag<android.widget.SeekBar>("B")?.progress = Color.blue(color)
-                        preview.setBackgroundColor(color)
-                    }
-                })
-            }
-            hexRow.addView(hexInput)
-            root.addView(hexRow)
-
-            fun addSlider(label: String, initial: Int, tag: String): android.widget.SeekBar {
-                val row = android.widget.LinearLayout(ctx).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).also { it.setMargins(0, 0, 0, (8 * dp).toInt()) }
-                }
-                row.addView(android.widget.TextView(ctx).apply {
-                    text = label
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    textSize = 14f
-                })
-                val seekBar = android.widget.SeekBar(ctx).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                    )
-                    max = 255; progress = initial
-                }
-                row.addView(seekBar)
-                val valueView = android.widget.TextView(ctx).apply {
-                    text = initial.toString()
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        (40 * dp).toInt(), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    gravity = android.view.Gravity.END
-                    textSize = 14f
-                }
-                row.addView(valueView)
-                root.addView(row)
-                seekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(sb: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                        valueView.text = progress.toString()
-                        val r = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
-                        val g = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
-                        val b = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
-                        preview.setBackgroundColor(Color.rgb(r, g, b))
-                        if (fromUser) hexInput.setText(String.format("%02X%02X%02X", r, g, b))
-                    }
-                    override fun onStartTrackingTouch(sb: android.widget.SeekBar?) {}
-                    override fun onStopTrackingTouch(sb: android.widget.SeekBar?) {}
-                })
-                seekBar.tag = tag
-                return seekBar
-            }
-
-            addSlider("R", Color.red(initial), "R")
-            addSlider("G", Color.green(initial), "G")
-            addSlider("B", Color.blue(initial), "B")
-
-            AlertDialog.Builder(ctx)
-                .setTitle(title)
-                .setView(root)
-                .setPositiveButton("OK") { _, _ ->
-                    val hex = try {
-                        val rv = root.findViewWithTag<android.widget.SeekBar>("R")?.progress ?: 0
-                        val gv = root.findViewWithTag<android.widget.SeekBar>("G")?.progress ?: 0
-                        val bv = root.findViewWithTag<android.widget.SeekBar>("B")?.progress ?: 0
-                        String.format("#%02X%02X%02X", rv, gv, bv)
-                    } catch (e: Exception) { "#c3c2b7" }
-                    prefs.edit().putString(prefKey, hex).apply()
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-
     }
 }

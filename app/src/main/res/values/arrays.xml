@@ -35,16 +35,4 @@
         <item>medium</item>
         <item>large</item>
     </string-array>
-
-    <!-- Settings app theme: system / light / dark -->
-    <string-array name="app_theme_labels">
-        <item>System default</item>
-        <item>Light</item>
-        <item>Dark</item>
-    </string-array>
-    <string-array name="app_theme_values">
-        <item>system</item>
-        <item>light</item>
-        <item>dark</item>
-    </string-array>
 </resources>

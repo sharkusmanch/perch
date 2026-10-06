@@ -228,11 +228,20 @@ class WidgetHostManager private constructor(
         }
     }
 
+    /** The widget provider assigned to a slot, or null if the slot is empty. */
+    fun slotProvider(slotIndex: Int): ComponentName? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val flattened = prefs.getString("${PREFS_KEY_SLOT_PREFIX}${slotIndex}_provider", null)
+        return flattened?.let(ComponentName::unflattenFromString)
+    }
+
     /** Remove widget from a slot. */
     fun removeWidget(slotIndex: Int) {
         if (slotIndex !in 0 until slotCount) return
-        val hostView = hostViews[slotIndex]
-        val appWidgetId = hostView?.appWidgetId
+        // No host view exists unless a dream is running, so fall back to the saved id.
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedId = prefs.getInt("${PREFS_KEY_SLOT_PREFIX}${slotIndex}_id", -1)
+        val appWidgetId = hostViews[slotIndex]?.appWidgetId ?: savedId.takeIf { it != -1 }
         if (appWidgetId != null) {
             appWidgetHost.deleteAppWidgetId(appWidgetId)
         }

@@ -76,6 +76,9 @@ dependencies {
     // ConstraintLayout
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
+    // Material 3 components for the settings screen
+    implementation("com.google.android.material:material:1.12.0")
+
     // Swipeable dream pages and clock faces
     implementation("androidx.viewpager2:viewpager2:1.1.0")
 

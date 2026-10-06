@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<View xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/color_dot"
+    android:layout_width="28dp"
+    android:layout_height="28dp"
+    android:background="@drawable/color_dot"
+    android:importantForAccessibility="no" />

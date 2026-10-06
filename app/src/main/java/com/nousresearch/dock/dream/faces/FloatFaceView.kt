@@ -42,7 +42,8 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
 
         Color.colorToHSV(accentColor, hsv)
         val baseHue = hsv[0]
-        val amplitude = DRIFT_DP * density
+        // Capped by the numeral size so small renderings (the settings preview) do not overlap.
+        val amplitude = minOf(DRIFT_DP * density, paint.textSize * MAX_DRIFT_FRACTION)
         // Double: a Float loses sub-second precision after days of uptime.
         val t = SystemClock.uptimeMillis() / 1000.0
 
@@ -66,6 +67,7 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
         const val MAX_WIDTH_FRACTION = 0.82f
         const val MAX_HEIGHT_FRACTION = 0.6f
         const val DRIFT_DP = 6f
+        const val MAX_DRIFT_FRACTION = 0.03f
         const val HUE_STEP = 28f
         const val SATURATION = 0.55f
         const val FRAME_MS = 66L
