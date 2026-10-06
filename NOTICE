@@ -1,6 +1,9 @@
 Perch
-A fork of Dock (https://github.com/Mobinshahidi/Dock), Copyright the Dock
-authors, licensed under the Apache License, Version 2.0.
+Copyright 2026 sharkusmanch
+
+A fork of Dock (https://github.com/Mobinshahidi/Dock),
+Copyright 2024-2026 Mobin Shahidi,
+licensed under the Apache License, Version 2.0.
 
 Changes in this fork: swipeable Widgets / Photos / Clock pages, Digital,
 Analog and Float clock faces replacing the original clock styles, and a
@@ -12,6 +15,6 @@ the SIL Open Font License 1.1 — see licenses/OFL-Nunito.txt.
 Settings icons: Material Icons (https://github.com/google/material-design-icons),
 Copyright Google LLC, licensed under the Apache License, Version 2.0.
 
-Upstream's LICENSE file is kept unchanged. Its wording differs in places from
-the canonical Apache License 2.0; it names that license and points to
-http://www.apache.org/licenses/LICENSE-2.0, which is the text this fork relies on.
+The LICENSE file is the canonical text of the Apache License, Version 2.0,
+from https://www.apache.org/licenses/LICENSE-2.0.txt. Upstream's copy of that
+file had altered wording; it named this license and linked to this text.
