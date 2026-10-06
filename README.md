@@ -5,7 +5,7 @@
 Perch is an Android screen saver (a `DreamService`). It has no ads, no tracking and no internet permission.
 
 <p align="center">
-  <a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/sharkusmanch/perch"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fadd%2Fhttps%3A%2F%2Fgithub.com%2Fsharkusmanch%2Fperch"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
   <a href="https://github.com/sharkusmanch/perch/releases/latest"><img src="https://img.shields.io/github/v/release/sharkusmanch/perch?label=Latest%20release&style=for-the-badge" alt="Latest release" height="56"></a>
 </p>
 
