@@ -41,6 +41,11 @@ jobs:
       - name: Test, lint and build
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
 
+      # Runs the same certificate check the release uses, so a change in the
+      # runner's tools shows up here rather than in the middle of a release.
+      - name: Check APK signature can be read
+        run: scripts/apk-cert-sha256.sh app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload debug APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
