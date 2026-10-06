@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
-    <string name="app_name">Dock StandBy</string>
-    <string name="settings_title">Dock StandBy Settings</string>
+    <string name="app_name">Perch</string>
+    <string name="settings_title">Perch Settings</string>
 
     <!-- Preference keys -->
     <string name="pref_key_oled_mode">oled_mode</string>
@@ -21,7 +21,7 @@
     >Preview and screen saver setup</string>
     <string
         name="pref_open_dream_settings_summary"
-    >Open the system screen saver page to select or preview Dock StandBy</string>
+    >Open the system screen saver page to select or preview Perch</string>
     <string name="pref_oled_title">OLED pure-black background</string>
     <string
         name="pref_oled_summary"
@@ -69,7 +69,7 @@
     <string name="slideshow_photos_selected">%d photos selected</string>
     <string
         name="photos_page_hint"
-    >No photos yet.\nPick some in Dock StandBy settings.</string>
+    >No photos yet.\nPick some in Perch settings.</string>
 
     <!-- Widgets section -->
     <string name="section_widgets">Widgets</string>
@@ -84,7 +84,7 @@
     <string name="widget_picker_empty">No widgets available</string>
     <string
         name="widgets_page_hint"
-    >No widgets yet.\nAdd some in Dock StandBy settings.</string>
+    >No widgets yet.\nAdd some in Perch settings.</string>
 
     <!-- Setup -->
     <string name="section_setup">Setup</string>

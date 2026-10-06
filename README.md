@@ -1,4 +1,4 @@
-# Dock StandBy
+# Perch
 
 > **This is a personal fork of [Mobinshahidi/Dock](https://github.com/Mobinshahidi/Dock)** (Apache 2.0),
 > reshaped to behave like iOS StandBy. It installs alongside the original as

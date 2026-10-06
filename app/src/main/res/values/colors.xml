@@ -7,4 +7,6 @@
     <color name="accent">#d57455</color>
     <!-- Subtle step-up for widget containers -->
     <color name="bg_surface">#2a2a28</color>
+    <!-- Launcher icon background: matches the edge of the icon artwork -->
+    <color name="ic_launcher_background">#111210</color>
 </resources>

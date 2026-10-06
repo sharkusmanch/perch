@@ -1,4 +1,4 @@
-name: Build Dock StandBy
+name: Build Perch
 
 # Manual only: this fork has no release signing secrets and nothing is
 # published automatically.
@@ -35,6 +35,6 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: dock-standby-debug-apk
+          name: perch-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
