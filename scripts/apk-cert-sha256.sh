@@ -11,8 +11,8 @@ apksigner=$(find "${ANDROID_HOME:?ANDROID_HOME is not set}/build-tools" -name ap
 output=$("$apksigner" verify --print-certs "$apk")
 
 # The line's prefix varies between apksigner versions ("Signer #1 ...",
-# "Signer (minSdkVersion=..., maxSdkVersion=...) ..."), so match on its end.
-digests=$(printf '%s\n' "$output" | sed -n 's/^Signer .*certificate SHA-256 digest: //p' | sort -u)
+# "V2 Signer: ..."), so match on its end.
+digests=$(printf '%s\n' "$output" | sed -n 's/^.*certificate SHA-256 digest: //p' | sort -u)
 
 if [ "$(printf '%s\n' "$digests" | grep -c .)" -ne 1 ]; then
   echo "Expected exactly one signing certificate, got:" >&2
