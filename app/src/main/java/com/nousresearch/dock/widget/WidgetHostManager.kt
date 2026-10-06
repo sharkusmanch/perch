@@ -8,10 +8,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -27,8 +27,8 @@ import com.nousresearch.dock.R
  * - Launch widget picker (ACTION_APPWIDGET_PICK)
  * - Add/remove/reorder slots per user config (1-3 slots)
  * - Style each slot: rounded corners, @color/bg_surface background, no shadows
- * - When widgets_enabled=false: hide rail and slot containers
- * - Release widget host on dream stop to avoid leaks
+ * - Lay the slots out across the dream's Widgets page
+ * - Release widget host and views on dream stop to avoid leaks
  */
 class WidgetHostManager private constructor(
     private val context: Context
@@ -41,7 +41,6 @@ class WidgetHostManager private constructor(
         private const val PREFS_NAME = "dock_widget_prefs"
         private const val PREFS_KEY_SLOT_COUNT = "widget_slot_count"
         private const val PREFS_KEY_SLOT_PREFIX = "widget_slot_"
-        private const val PREFS_KEY_ENABLED = "widgets_enabled"
 
         @Volatile private var INSTANCE: WidgetHostManager? = null
 
@@ -67,14 +66,19 @@ class WidgetHostManager private constructor(
 
     // State
     private var slotCount = 1
-    private var isEnabled = true
     private var isStarted = false
     private var currentIsLandscape = false
+    private var nightMode = false
 
     // Themed context for RemoteViews inflation (set by init)
     private var viewContext: Context = context
 
-    /** Initialize with the widget rail container and the current orientation. */
+    // Settings can use the manager before any dream has called init().
+    init {
+        loadPersistedState()
+    }
+
+    /** Initialize with the Widgets page container and the current orientation. */
     fun init(widgetRail: ViewGroup, isLandscape: Boolean) {
         this.widgetRail = widgetRail
         this.viewContext = widgetRail.context.applicationContext
@@ -85,7 +89,7 @@ class WidgetHostManager private constructor(
 
     /** Start binding all widgets. Must be called after init(). */
     fun start() {
-        if (!isEnabled || isStarted) return
+        if (isStarted) return
         isStarted = true
         appWidgetHost.startListening()
         bindAllWidgets()
@@ -99,20 +103,32 @@ class WidgetHostManager private constructor(
         appWidgetHost.stopListening()
     }
 
-    /** Enable/disable widgets entirely. When disabled, views are hidden. */
-    fun setEnabled(enabled: Boolean) {
-        isEnabled = enabled
-        persistEnabled()
-        if (enabled) {
-            if (isStarted) start()
-            showRail()
-        } else {
-            stop()
-            hideRail()
+    /** Stop and drop every reference to the dream's views. */
+    fun release() {
+        stop()
+        widgetRail?.removeAllViews()
+        widgetRail = null
+        slotViews.fill(null)
+        hostViews.fill(null)
+        viewContext = context
+        nightMode = false
+    }
+
+    /** Whether any current slot has a widget assigned. */
+    fun hasAnyWidget(): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return (0 until slotCount).any {
+            prefs.getInt("${PREFS_KEY_SLOT_PREFIX}${it}_id", -1) != -1
         }
     }
 
-    fun isEnabled(): Boolean = isEnabled
+    /** Night Mode needs pure black behind widgets; the usual grey would glow red. */
+    fun setNightMode(on: Boolean) {
+        nightMode = on
+        for (i in 0 until slotCount) {
+            slotViews[i]?.let { applySlotBackground(it) }
+        }
+    }
 
     /** Allocate a new widget ID for a slot (for picker launch). */
     fun allocateWidgetIdForSlot(slotIndex: Int): Int {
@@ -238,21 +254,9 @@ class WidgetHostManager private constructor(
         val density = context.resources.displayMetrics.density
         val spacingPx = (12 * density).toInt()
 
+        // Side by side in landscape, stacked in portrait.
         (widgetRail as? LinearLayout)?.let {
-            it.orientation = if (isLandscape) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        }
-
-        // Give the portrait rail a configurable height
-        if (!isLandscape) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val sizePref = prefs.getString("widget_rail_height", "medium") ?: "medium"
-            val baseHeight = when (sizePref) {
-                "small" -> 80
-                "large" -> 180
-                else -> 120
-            }
-            val railHeightDp = baseHeight + (slotCount - 1) * 40
-            widgetRail?.layoutParams?.height = (railHeightDp * density).toInt()
+            it.orientation = if (isLandscape) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
         }
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -269,30 +273,34 @@ class WidgetHostManager private constructor(
         for (i in 0 until slotCount) {
             val lp = if (isLandscape) {
                 LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
                     0,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     normWeights[i]
                 )
             } else {
                 LinearLayout.LayoutParams(
-                    0,
                     ViewGroup.LayoutParams.MATCH_PARENT,
+                    0,
                     normWeights[i]
                 )
             }
             if (i < slotCount - 1) {
-                if (isLandscape) lp.bottomMargin = spacingPx
-                else lp.marginEnd = spacingPx
+                if (isLandscape) lp.marginEnd = spacingPx
+                else lp.bottomMargin = spacingPx
             }
             val slotContainer = FrameLayout(context).apply {
                 layoutParams = lp
-                setBackgroundResource(R.drawable.widget_slot_background)
                 clipToOutline = true
-                visibility = if (isEnabled && isOrientationAllowed()) View.VISIBLE else View.GONE
             }
+            applySlotBackground(slotContainer)
             widgetRail?.addView(slotContainer)
             slotViews[i] = slotContainer
         }
+    }
+
+    private fun applySlotBackground(slot: FrameLayout) {
+        if (nightMode) slot.setBackgroundColor(Color.BLACK)
+        else slot.setBackgroundResource(R.drawable.widget_slot_background)
     }
 
     private fun bindAllWidgets() {
@@ -374,31 +382,6 @@ class WidgetHostManager private constructor(
         }
     }
 
-    /** Whether widgets are allowed in the current orientation. */
-    private fun isOrientationAllowed(): Boolean {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val key = if (currentIsLandscape) "widget_show_landscape" else "widget_show_portrait"
-        return prefs.getBoolean(key, true)
-    }
-
-    private fun showRail() {
-        if (!isOrientationAllowed()) {
-            widgetRail?.visibility = View.GONE
-            return
-        }
-        widgetRail?.visibility = View.VISIBLE
-        for (i in 0 until slotCount) {
-            slotViews[i]?.visibility = View.VISIBLE
-        }
-    }
-
-    private fun hideRail() {
-        widgetRail?.visibility = View.GONE
-        for (i in 0 until slotCount) {
-            slotViews[i]?.visibility = View.GONE
-        }
-    }
-
     private fun getWidgetProviderInfo(appWidgetId: Int): AppWidgetProviderInfo? {
         return appWidgetManager.getAppWidgetInfo(appWidgetId)
     }
@@ -406,17 +389,11 @@ class WidgetHostManager private constructor(
     private fun loadPersistedState() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         slotCount = prefs.getInt(PREFS_KEY_SLOT_COUNT, 1).coerceIn(1, MAX_SLOTS)
-        isEnabled = prefs.getBoolean(PREFS_KEY_ENABLED, true)
     }
 
     private fun persistSlotCount() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putInt(PREFS_KEY_SLOT_COUNT, slotCount).apply()
-    }
-
-    private fun persistEnabled() {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(PREFS_KEY_ENABLED, isEnabled).apply()
     }
 
     private fun persistWidget(slotIndex: Int, provider: ComponentName, appWidgetId: Int) {

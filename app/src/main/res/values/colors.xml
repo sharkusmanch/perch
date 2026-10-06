@@ -7,8 +7,6 @@
     <color name="accent">#d57455</color>
     <!-- Subtle step-up for widget containers -->
     <color name="bg_surface">#2a2a28</color>
-    <!-- Scrim overlay for slideshow -->
-    <color name="scrim">#80000000</color>
 
     <!-- Settings app UI palette (light/day default). The dark counterparts
          used when the Settings app theme is Dark (or System follows dark)

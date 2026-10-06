@@ -24,93 +24,6 @@
         <item>3</item>
     </string-array>
 
-    <!-- Night dim start/end times -->
-    <string-array name="night_dim_time_labels">
-        <item>8:00 PM</item>
-        <item>9:00 PM</item>
-        <item>10:00 PM</item>
-        <item>11:00 PM</item>
-        <item>12:00 AM</item>
-        <item>1:00 AM</item>
-        <item>2:00 AM</item>
-    </string-array>
-    <string-array name="night_dim_time_values">
-        <item>20</item>
-        <item>21</item>
-        <item>22</item>
-        <item>23</item>
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-    </string-array>
-    <string-array name="night_dim_end_time_labels">
-        <item>5:00 AM</item>
-        <item>6:00 AM</item>
-        <item>7:00 AM</item>
-        <item>8:00 AM</item>
-        <item>9:00 AM</item>
-    </string-array>
-    <string-array name="night_dim_end_time_values">
-        <item>5</item>
-        <item>6</item>
-        <item>7</item>
-        <item>8</item>
-        <item>9</item>
-    </string-array>
-    <!-- Clock position: left, center, right -->
-    <string-array name="clock_position_labels">
-        <item>Left</item>
-        <item>Center</item>
-        <item>Right</item>
-    </string-array>
-    <string-array name="clock_position_values">
-        <item>left</item>
-        <item>center</item>
-        <item>right</item>
-    </string-array>
-
-    <!-- Clock relative font size -->
-    <string-array name="clock_font_size_labels">
-        <item>Small</item>
-        <item>Medium</item>
-        <item>Large</item>
-        <item>Extra Large</item>
-    </string-array>
-    <string-array name="clock_font_size_values">
-        <item>0.6</item>
-        <item>0.8</item>
-        <item>1.0</item>
-        <item>1.2</item>
-    </string-array>
-
-    <!-- Clock color options -->
-    <string-array name="clock_color_labels">
-        <item>Default warm</item>
-        <item>White</item>
-        <item>Accent</item>
-    </string-array>
-    <string-array name="clock_color_values">
-        <item>default</item>
-        <item>white</item>
-        <item>accent</item>
-    </string-array>
-
-    <!-- Clock font families -->
-    <string-array name="clock_font_labels">
-        <item>Default</item>
-        <item>Serif</item>
-        <item>Monospace</item>
-        <item>Sans-serif Light</item>
-        <item>Sans-serif Thin</item>
-    </string-array>
-    <string-array name="clock_font_values">
-        <item>default</item>
-        <item>serif</item>
-        <item>monospace</item>
-        <item>sans-serif-light</item>
-        <item>sans-serif-thin</item>
-    </string-array>
-
     <!-- Slot size presets -->
     <string-array name="slot_size_labels">
         <item>Small</item>
@@ -118,18 +31,6 @@
         <item>Large</item>
     </string-array>
     <string-array name="slot_size_values">
-        <item>small</item>
-        <item>medium</item>
-        <item>large</item>
-    </string-array>
-
-    <!-- Widget rail height in portrait -->
-    <string-array name="widget_rail_height_labels">
-        <item>Small</item>
-        <item>Medium (default)</item>
-        <item>Large</item>
-    </string-array>
-    <string-array name="widget_rail_height_values">
         <item>small</item>
         <item>medium</item>
         <item>large</item>
@@ -145,23 +46,5 @@
         <item>system</item>
         <item>light</item>
         <item>dark</item>
-    </string-array>
-
-    <!-- Clock visual styles -->
-    <string-array name="clock_style_labels">
-        <item>Normal</item>
-        <item>Bubble</item>
-        <item>Neon</item>
-        <item>Mono</item>
-        <item>Gradient</item>
-        <item>Outline</item>
-    </string-array>
-    <string-array name="clock_style_values">
-        <item>default</item>
-        <item>bubble</item>
-        <item>neon</item>
-        <item>mono</item>
-        <item>gradient</item>
-        <item>outline</item>
     </string-array>
 </resources>

@@ -1,43 +1,38 @@
 package com.nousresearch.dock.slideshow
 
-import android.content.ContentResolver
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
-import androidx.annotation.VisibleForTesting
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import com.nousresearch.dock.R
 
 /**
- * PhotoSlideshowManager — manages crossfade slideshow for the dream background.
+ * PhotoSlideshowManager — manages the crossfade slideshow on the dream's Photos page.
  *
  * Responsibilities:
  * - Load photos from persisted URIs using Glide
  * - Crossfade between two ImageViews (front/back) for smooth transitions
- * - Apply dark scrim overlay (40-50% black) for text legibility
- * - Respect slideshow_enabled toggle — skip all loading when disabled
  * - Configurable interval (30s / 1m / 5m)
  *
  * Usage:
  *   val manager = PhotoSlideshowManager.getInstance(context)
  *   manager.init(frontImageView, backImageView, scrimView)
  *   manager.setPhotoUris(uris)
- *   manager.start()
- *   manager.stop() // on dream stop
+ *   manager.showFirst()      // dream start: show a photo
+ *   manager.resumeCycling()  // page visible: advance on the interval
+ *   manager.pauseCycling()   // page hidden: hold the current photo
+ *   manager.release()        // dream stop
  */
 class PhotoSlideshowManager private constructor(
     private val context: Context
 ) {
 
     companion object {
-        private const val TAG = "PhotoSlideshowManager"
         @Volatile private var INSTANCE: PhotoSlideshowManager? = null
         fun getInstance(context: Context): PhotoSlideshowManager =
             INSTANCE ?: synchronized(this) {
@@ -54,18 +49,16 @@ class PhotoSlideshowManager private constructor(
     private var photoUris: List<Uri> = emptyList()
     private var currentIndex = 0
     private var isFrontShowing = true
-    private var isRunning = false
-    private var isEnabled = true
+    private var isCycling = false
     private var intervalMillis = 60000L // default 1 minute
 
     private val handler = Handler(Looper.getMainLooper())
-    private val contentResolver: ContentResolver = context.contentResolver
 
     // Runnable for advancing slideshow
     private val advanceRunnable = Runnable { advanceSlideshow() }
 
     /**
-     * Initialize with view references. Must be called before start().
+     * Initialize with view references. Must be called before showFirst().
      */
     fun init(
         front: ImageView,
@@ -75,7 +68,7 @@ class PhotoSlideshowManager private constructor(
         frontImageView = front
         backImageView = back
         scrimView = scrim
-        applyScrim()
+        isFrontShowing = true
     }
 
     /** Set the list of photo URIs to cycle through. */
@@ -84,46 +77,47 @@ class PhotoSlideshowManager private constructor(
         currentIndex = 0
     }
 
-    /** Start the slideshow (load first photo, begin timer). */
-    fun start() {
-        if (!isEnabled || photoUris.isEmpty()) {
+    fun hasPhotos(): Boolean = photoUris.isNotEmpty()
+
+    /** Show the current photo without starting the timer. */
+    fun showFirst() {
+        if (photoUris.isEmpty()) {
             hideViews()
             return
         }
-        isRunning = true
         showViews()
         loadCurrentPhoto()
+    }
+
+    /** Advance to the next photo every interval. */
+    fun resumeCycling() {
+        if (isCycling || photoUris.size < 2) return
+        isCycling = true
         scheduleNext()
     }
 
-    /** Stop the slideshow and cancel pending transitions. */
-    fun stop() {
-        isRunning = false
+    /** Hold the current photo. */
+    fun pauseCycling() {
+        isCycling = false
         handler.removeCallbacks(advanceRunnable)
-        // Keep views visible but stop cycling
+    }
+
+    /** Stop and drop every reference to the dream's views. */
+    fun release() {
+        pauseCycling()
+        frontImageView = null
+        backImageView = null
+        scrimView = null
     }
 
     /** Update the slideshow interval. Takes effect on next cycle. */
     fun setInterval(millis: Long) {
         intervalMillis = millis
-        if (isRunning) {
+        if (isCycling) {
             handler.removeCallbacks(advanceRunnable)
             scheduleNext()
         }
     }
-
-    /** Enable/disable slideshow entirely. When disabled, views are hidden and no loading occurs. */
-    fun setEnabled(enabled: Boolean) {
-        isEnabled = enabled
-        if (enabled) {
-            if (isRunning) start()
-        } else {
-            stop()
-            hideViews()
-        }
-    }
-
-    fun isEnabled(): Boolean = isEnabled
 
     // ------------------------------------------------------------------
     // Private implementation
@@ -141,10 +135,6 @@ class PhotoSlideshowManager private constructor(
         scrimView?.visibility = View.GONE
     }
 
-    private fun applyScrim() {
-        scrimView?.setBackgroundColor(context.getColor(R.color.scrim))
-    }
-
     private fun loadCurrentPhoto() {
         val uri = photoUris[currentIndex]
         val targetView = if (isFrontShowing) backImageView else frontImageView
@@ -154,7 +144,10 @@ class PhotoSlideshowManager private constructor(
             .centerCrop()
             .into(object : CustomTarget<Drawable>() {
                 override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    targetView?.apply {
+                    // The dream may have stopped, or rebuilt its views, while this loaded.
+                    val stillTarget = if (isFrontShowing) backImageView else frontImageView
+                    if (targetView == null || targetView !== stillTarget) return
+                    targetView.apply {
                         setImageDrawable(resource)
                         alpha = 0f
                         visibility = View.VISIBLE
@@ -179,7 +172,7 @@ class PhotoSlideshowManager private constructor(
     }
 
     private fun advanceSlideshow() {
-        if (!isRunning || photoUris.isEmpty()) return
+        if (!isCycling || photoUris.isEmpty()) return
         currentIndex = (currentIndex + 1) % photoUris.size
         loadCurrentPhoto()
         scheduleNext()
@@ -187,10 +180,5 @@ class PhotoSlideshowManager private constructor(
 
     private fun scheduleNext() {
         handler.postDelayed(advanceRunnable, intervalMillis)
-    }
-
-    @VisibleForTesting
-    internal fun setContentResolverForTest(resolver: ContentResolver) {
-        // Not used but kept for testability pattern
     }
 }

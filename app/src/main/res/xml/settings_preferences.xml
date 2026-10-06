@@ -27,161 +27,10 @@
     />
 
     <SwitchPreferenceCompat
-        android:key="@string/pref_key_night_dim"
-        android:title="@string/pref_night_dim_title"
-        android:summary="@string/pref_night_dim_summary"
+        android:key="@string/pref_key_night_mode"
+        android:title="@string/pref_night_mode_title"
+        android:summary="@string/pref_night_mode_summary"
         android:defaultValue="true"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_night_dim_start"
-        android:title="@string/pref_night_dim_start_title"
-        android:summary="@string/pref_night_dim_start_summary"
-        android:entries="@array/night_dim_time_labels"
-        android:entryValues="@array/night_dim_time_values"
-        android:defaultValue="22"
-        android:dependency="@string/pref_key_night_dim"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_night_dim_end"
-        android:title="@string/pref_night_dim_end_title"
-        android:summary="@string/pref_night_dim_end_summary"
-        android:entries="@array/night_dim_end_time_labels"
-        android:entryValues="@array/night_dim_end_time_values"
-        android:defaultValue="7"
-        android:dependency="@string/pref_key_night_dim"
-    />
-
-    <!-- ===== Clock ===== -->
-    <PreferenceCategory
-        android:title="@string/section_clock"
-        android:layout="@layout/preference_category_custom"
-    />
-
-    <com.nousresearch.dock.settings.ClockStylePreviewPreference
-        android:key="clock_style_preview"
-        android:persistent="false"
-        android:selectable="false"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_clock_position"
-        android:title="@string/pref_clock_position_title"
-        android:summary="@string/pref_clock_position_summary"
-        android:entries="@array/clock_position_labels"
-        android:entryValues="@array/clock_position_values"
-        android:defaultValue="left"
-    />
-
-    <SeekBarPreference
-        android:key="@string/pref_key_clock_font_size"
-        android:title="@string/pref_clock_font_size_title"
-        android:summary="@string/pref_clock_font_size_summary"
-        android:max="200"
-        android:defaultValue="100"
-    />
-
-    <SeekBarPreference
-        android:key="@string/pref_key_date_font_size"
-        android:title="@string/pref_date_font_size_title"
-        android:summary="@string/pref_date_font_size_summary"
-        android:max="200"
-        android:defaultValue="100"
-        android:dependency="@string/pref_key_show_date"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_clock_font"
-        android:title="@string/pref_clock_font_title"
-        android:summary="@string/pref_clock_font_summary"
-        android:entries="@array/clock_font_labels"
-        android:entryValues="@array/clock_font_values"
-        android:defaultValue="default"
-    />
-
-    <Preference
-        android:key="clock_font_upload"
-        android:title="@string/clock_font_upload"
-        android:summary="@string/pref_clock_font_summary"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_clock_style"
-        android:title="@string/pref_clock_style_title"
-        android:summary="@string/pref_clock_style_summary"
-        android:entries="@array/clock_style_labels"
-        android:entryValues="@array/clock_style_values"
-        android:defaultValue="default"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_normal"
-        android:title="@string/pref_clock_color_title"
-        android:summary="@string/pref_clock_color_summary"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_bubble"
-        android:title="@string/pref_bubble_color_title"
-        android:summary="@string/pref_bubble_color_summary"
-        android:visible="false"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_neon"
-        android:title="@string/pref_neon_color_title"
-        android:summary="@string/pref_neon_color_summary"
-        android:visible="false"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_gradient"
-        android:title="@string/pref_gradient_color_title"
-        android:summary="@string/pref_gradient_color_summary"
-        android:visible="false"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_mono"
-        android:title="@string/pref_mono_color_title"
-        android:summary="@string/pref_mono_color_summary"
-        android:visible="false"
-    />
-
-    <Preference
-        android:key="@string/pref_key_clock_color_outline"
-        android:title="@string/pref_outline_color_title"
-        android:summary="@string/pref_outline_color_summary"
-        android:visible="false"
-    />
-
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_clock_24h"
-        android:title="@string/pref_clock_24h_title"
-        android:summary="@string/pref_clock_24h_summary"
-        android:defaultValue="true"
-    />
-
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_transition_animation"
-        android:title="@string/pref_transition_title"
-        android:summary="@string/pref_transition_summary"
-        android:defaultValue="true"
-    />
-
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_show_date"
-        android:title="@string/pref_show_date_title"
-        android:summary="@string/pref_show_date_summary"
-        android:defaultValue="true"
-    />
-
-    <Preference
-        android:key="@string/pref_key_date_color"
-        android:title="@string/pref_date_color_title"
-        android:summary="@string/pref_date_color_summary"
-        android:dependency="@string/pref_key_show_date"
     />
 
     <SwitchPreferenceCompat
@@ -191,33 +40,41 @@
         android:defaultValue="true"
     />
 
-    <Preference
-        android:key="@string/pref_key_battery_color"
-        android:title="@string/pref_battery_color_title"
-        android:summary="@string/pref_battery_color_summary"
-        android:dependency="@string/pref_key_battery_enabled"
-    />
-
-    <SeekBarPreference
-        android:key="@string/pref_key_battery_font_size"
-        android:title="@string/pref_battery_size_title"
-        android:summary="@string/pref_battery_size_summary"
-        android:max="200"
-        android:defaultValue="100"
-        android:dependency="@string/pref_key_battery_enabled"
-    />
-
-    <!-- ===== Slideshow ===== -->
+    <!-- ===== Clock ===== -->
     <PreferenceCategory
-        android:title="@string/section_slideshow"
+        android:title="@string/section_clock"
         android:layout="@layout/preference_category_custom"
     />
 
     <SwitchPreferenceCompat
-        android:key="@string/pref_key_slideshow_enabled"
-        android:title="@string/pref_slideshow_title"
-        android:summary="@string/pref_slideshow_summary"
+        android:key="@string/pref_key_clock_24h"
+        android:title="@string/pref_clock_24h_title"
+        android:summary="@string/pref_clock_24h_summary"
         android:defaultValue="true"
+    />
+
+    <Preference
+        android:key="@string/pref_key_face_color_digital"
+        android:title="@string/pref_face_color_digital_title"
+        android:summary="@string/pref_face_color_digital_summary"
+    />
+
+    <Preference
+        android:key="@string/pref_key_face_color_analog"
+        android:title="@string/pref_face_color_analog_title"
+        android:summary="@string/pref_face_color_analog_summary"
+    />
+
+    <Preference
+        android:key="@string/pref_key_face_color_float"
+        android:title="@string/pref_face_color_float_title"
+        android:summary="@string/pref_face_color_float_summary"
+    />
+
+    <!-- ===== Photos ===== -->
+    <PreferenceCategory
+        android:title="@string/section_slideshow"
+        android:layout="@layout/preference_category_custom"
     />
 
     <Preference
@@ -229,10 +86,10 @@
     <ListPreference
         android:key="@string/pref_key_slideshow_interval"
         android:title="@string/slideshow_interval"
+        android:summary="%s"
         android:entries="@array/slideshow_interval_labels"
         android:entryValues="@array/slideshow_interval_values"
         android:defaultValue="60000"
-        android:dependency="@string/pref_key_slideshow_enabled"
     />
 
     <!-- ===== Widgets ===== -->
@@ -241,51 +98,18 @@
         android:layout="@layout/preference_category_custom"
     />
 
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_widgets_enabled"
-        android:title="@string/pref_widgets_title"
-        android:summary="@string/pref_widgets_summary"
-        android:defaultValue="true"
-    />
-
     <ListPreference
         android:key="@string/pref_key_widget_slot_count"
         android:title="@string/widget_slot_count"
         android:entries="@array/widget_slot_count_labels"
         android:entryValues="@array/widget_slot_count_values"
         android:defaultValue="1"
-        android:dependency="@string/pref_key_widgets_enabled"
-    />
-
-    <ListPreference
-        android:key="@string/pref_key_widget_rail_height"
-        android:title="@string/pref_widget_rail_height_title"
-        android:summary="@string/pref_widget_rail_height_summary"
-        android:entries="@array/widget_rail_height_labels"
-        android:entryValues="@array/widget_rail_height_values"
-        android:defaultValue="medium"
-        android:dependency="@string/pref_key_widget_show_portrait"
-    />
-
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_widget_show_portrait"
-        android:title="@string/pref_widget_show_portrait_title"
-        android:defaultValue="true"
-        android:dependency="@string/pref_key_widgets_enabled"
-    />
-
-    <SwitchPreferenceCompat
-        android:key="@string/pref_key_widget_show_landscape"
-        android:title="@string/pref_widget_show_landscape_title"
-        android:defaultValue="true"
-        android:dependency="@string/pref_key_widgets_enabled"
     />
 
     <Preference
         android:key="manage_slot_1"
         android:title="@string/widget_manage_slot"
         android:summary="@string/widget_pick_for_slot"
-        android:dependency="@string/pref_key_widgets_enabled"
     />
 
     <ListPreference
@@ -295,7 +119,6 @@
         android:entries="@array/slot_size_labels"
         android:entryValues="@array/slot_size_values"
         android:defaultValue=""
-        android:dependency="@string/pref_key_widgets_enabled"
     />
 
     <PreferenceCategory
@@ -308,7 +131,6 @@
         android:key="manage_slot_2"
         android:title="@string/widget_manage_slot"
         android:summary="@string/widget_pick_for_slot"
-        android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false"
     />
 
@@ -319,7 +141,6 @@
         android:entries="@array/slot_size_labels"
         android:entryValues="@array/slot_size_values"
         android:defaultValue=""
-        android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false"
     />
 
@@ -333,7 +154,6 @@
         android:key="manage_slot_3"
         android:title="@string/widget_manage_slot"
         android:summary="@string/widget_pick_for_slot"
-        android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false"
     />
 
@@ -344,7 +164,6 @@
         android:entries="@array/slot_size_labels"
         android:entryValues="@array/slot_size_values"
         android:defaultValue=""
-        android:dependency="@string/pref_key_widgets_enabled"
         android:visible="false"
     />
 
@@ -358,7 +177,6 @@
         android:key="auto_start_guide"
         android:title="@string/pref_autostart_title"
         android:summary="@string/pref_autostart_summary"
-        android:selectable="false"
     />
 
     <!-- ===== About ===== -->
@@ -370,12 +188,7 @@
     <Preference
         android:key="about_license"
         android:title="@string/about_license"
-        android:summary="@string/about_repo"
-    >
-        <intent
-            android:action="android.intent.action.VIEW"
-            android:data="https://github.com/Mobinshahidi/Dock"
-        />
-    </Preference>
+        android:summary="@string/about_summary"
+    />
 
 </PreferenceScreen>

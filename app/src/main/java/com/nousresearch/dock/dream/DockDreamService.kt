@@ -1,5 +1,6 @@
 package com.nousresearch.dock.dream
 
+import android.animation.ValueAnimator
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -7,40 +8,34 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Color
-import android.graphics.Typeface
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
-import android.content.res.Resources
-import android.net.Uri
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.os.BatteryManager
-import android.os.Handler
-import android.os.Looper
 import android.service.dreams.DreamService
-import android.view.LayoutInflater
 import android.view.Surface
 import android.view.View
 import android.view.WindowManager
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.preference.PreferenceManager
+import androidx.viewpager2.widget.ViewPager2
 import com.nousresearch.dock.R
-import com.nousresearch.dock.slideshow.PhotoSlideshowManager
-import com.nousresearch.dock.widget.WidgetHostManager
-import java.util.Calendar
-import kotlin.math.sqrt
+import com.nousresearch.dock.dream.night.NightModeController
+import com.nousresearch.dock.dream.night.NightTint
+import com.nousresearch.dock.dream.pages.ClockPage
+import com.nousresearch.dock.dream.pages.DreamPage
+import com.nousresearch.dock.dream.pages.PhotosPage
+import com.nousresearch.dock.dream.pages.ViewListAdapter
+import com.nousresearch.dock.dream.pages.WidgetsPage
 
 /**
  * Dock dream service — the charging screensaver.
  *
- * Phase 1: Shows a large clock + date on the custom dark background.
- * Phase 2: Reads slideshow_enabled and widgets_enabled toggles from
- *          SharedPreferences and shows/hides the respective modules.
- * Phase 3: Integrates PhotoSlideshowManager for photo background with crossfade.
- * Phase 4: Integrates WidgetHostManager for live widgets.
+ * Three full-screen pages swiped sideways: Widgets, Photos, Clock. The
+ * Clock page swipes up and down between faces. When the room is dark the
+ * whole screen turns dim and red (Night Mode).
+ *
+ * The dream is interactive so swipes reach the pages; a double-tap on the
+ * Photos or Clock page wakes the device.
  *
  * The system handles auto-launch when charging (user selects Dock
  * in Settings → Display → Screen saver → While charging).
@@ -48,122 +43,230 @@ import kotlin.math.sqrt
 class DockDreamService : DreamService() {
 
     private lateinit var prefs: SharedPreferences
-    private lateinit var rootLayout: ConstraintLayout
 
-    // Slideshow views
-    private lateinit var slideshowFront: ImageView
-    private lateinit var slideshowBack: ImageView
-    private lateinit var scrimOverlay: View
+    private var root: DreamRootLayout? = null
+    private var pager: ViewPager2? = null
+    private var batteryStatus: TextView? = null
+    private var pages: List<DreamPage> = emptyList()
 
-    // Widget views
-    private lateinit var widgetRail: LinearLayout
-
-    // Clock views
-    private lateinit var clockContainer: LinearLayout
-    private lateinit var clockDisplay: AnimatedClockView
-    private lateinit var dateDisplay: android.widget.TextClock
-    private lateinit var batteryStatus: TextView
-
-    // Battery receiver
+    private var dreaming = false
     private var batteryReceiver: BroadcastReceiver? = null
 
-    // Resources for the orientation actually being displayed (the dream can be
-    // built against a forced orientation, so base dimens must come from here,
-    // not the possibly-mismatched default resources).
-    private lateinit var displayResources: Resources
+    // Night Mode
+    private var nightController: NightModeController? = null
+    private var nightOn = false
+    private var tintFraction = 0f
+    private var tintAnimator: ValueAnimator? = null
+    private val tintPaint = Paint()
 
-    // Shake / accelerometer
-    private var sensorManager: SensorManager? = null
-    private var lastShakeTriggerMs = 0L
+    private val pageCallback = object : ViewPager2.OnPageChangeCallback() {
+        private var current = -1
 
-    private val shakeListener = object : SensorEventListener {
-        private val SHAKE_THRESHOLD = 12f
-        override fun onSensorChanged(event: SensorEvent) {
-            if (event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
-            val x = event.values[0]
-            val y = event.values[1]
-            val z = event.values[2]
-            val gForce = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
-            if (gForce <= SHAKE_THRESHOLD) return
-            // Debounce so a single shake fires one spring, but sustained shaking
-            // keeps re-triggering (onShake restarts the wobble each time).
-            val now = System.currentTimeMillis()
-            if (now - lastShakeTriggerMs < 250) return
-            lastShakeTriggerMs = now
-            if (::clockDisplay.isInitialized) {
-                val g = SensorManager.GRAVITY_EARTH
-                clockDisplay.onShake(x / g, y / g)
-            }
+        override fun onPageSelected(position: Int) {
+            if (position == current) return
+            pages.getOrNull(current)?.pause()
+            pages.getOrNull(position)?.resume()
+            current = position
+            prefs.edit().putInt(DreamPrefs.KEY_LAST_PAGE, position).apply()
         }
-        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-    }
 
-    // Managers (lazy — Service context not valid during construction)
-    private lateinit var slideshowManager: PhotoSlideshowManager
-    private lateinit var widgetHostManager: WidgetHostManager
+        override fun onPageScrollStateChanged(state: Int) {
+            if (state == ViewPager2.SCROLL_STATE_DRAGGING) pages.forEach { it.refresh() }
+        }
+
+        fun reset() {
+            current = -1
+        }
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        setInteractive(false)
+        setInteractive(true)
         setFullscreen(true)
         setScreenBright(false)
         applySystemUiFlags()
 
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        setupContentView()
+        buildContent(currentPhysicalOrientation())
     }
 
     /**
      * Called when the device orientation changes while the dream is
-     * running (e.g. user rotates the phone).  Tears down the view tree
-     * and rebuilds it against the correct layout-land / layout resource.
+     * running (e.g. user rotates the phone). Tears down the pages and
+     * rebuilds them for the new orientation.
      */
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
         // The system can deliver this before onAttachedToWindow() has ever
-        // run (initial dream-window launch).  At that point there is no view
-        // tree or managers to rebuild, and windowManager may still be null.
-        if (!::widgetHostManager.isInitialized) return
+        // run (initial dream-window launch). There is nothing to rebuild yet.
+        if (root == null) return
 
-        widgetHostManager.stop()
-        slideshowManager.stop()
-        clockDisplay.stop()
-
-        // newConfig is the system's authoritative orientation for this
-        // genuine rotation event — no need to re-derive via windowManager.
-        setupContentView(newConfig.orientation)
-        loadModuleStates()
-        applyClockPosition()
-        applyClockCustomization()
-        clockDisplay.start()
-        registerBatteryReceiver()
-        startSlideshowIfEnabled()
-        widgetHostManager.start()
+        if (dreaming) stopPages()
+        buildContent(newConfig.orientation)
+        if (dreaming) startPages()
+        applyNightMode(animate = false)
     }
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
-        loadModuleStates()
-        applyClockPosition()
-        applyClockCustomization()
-        registerSensor()
-        clockDisplay.start()
+        dreaming = true
+        startPages()
         registerBatteryReceiver()
-        startSlideshowIfEnabled()
-        widgetHostManager.start()
-        startDimScheduler()
+        if (prefs.getBoolean(getString(R.string.pref_key_night_mode), true)) {
+            nightController = NightModeController(this, ::onNightModeChanged).also { it.start() }
+        }
     }
 
     override fun onDreamingStopped() {
         super.onDreamingStopped()
-        clockDisplay.stop()
-        unregisterSensor()
+        dreaming = false
+        nightController?.stop()
+        nightController = null
+        nightOn = false
+        applyNightMode(animate = false)
         unregisterBatteryReceiver()
-        slideshowManager.stop()
-        widgetHostManager.stop()
-        stopDimScheduler()
+        stopPages()
     }
+
+    // ------------------------------------------------------------------
+    // Pages
+    // ------------------------------------------------------------------
+
+    /** Inflates the root and builds the three pages. */
+    private fun buildContent(orientation: Int) {
+        setContentView(R.layout.dream_dock)
+        val root = findViewById<DreamRootLayout>(R.id.dream_root)
+        val pager = findViewById<ViewPager2>(R.id.dream_pager)
+        this.root = root
+        this.pager = pager
+        batteryStatus = findViewById(R.id.battery_status)
+
+        pages = listOf(
+            WidgetsPage(this, orientation == Configuration.ORIENTATION_LANDSCAPE),
+            PhotosPage(this, prefs),
+            ClockPage(this, prefs)
+        )
+        pager.adapter = ViewListAdapter(pages.map { it.view })
+        // Keep every page alive so a swipe never rebuilds widgets or photos.
+        pager.offscreenPageLimit = pages.size - 1
+
+        // Widgets handle their own taps, so the exit gesture is left off that page.
+        root.onDoubleTap = { if (pager.currentItem != PAGE_WIDGETS) wakeUp() }
+
+        applyBackgroundColor()
+    }
+
+    private fun startPages() {
+        val pager = pager ?: return
+        pages.forEach { it.attach() }
+        val last = prefs.getInt(DreamPrefs.KEY_LAST_PAGE, PAGE_CLOCK).coerceIn(0, pages.size - 1)
+        pager.setCurrentItem(last, false)
+        pageCallback.reset()
+        pager.registerOnPageChangeCallback(pageCallback)
+        // Registering does not report the page already showing.
+        pageCallback.onPageSelected(last)
+        pages.forEach { it.setNightMode(nightOn) }
+
+        val showBattery = prefs.getBoolean(getString(R.string.pref_key_battery_enabled), true)
+        batteryStatus?.visibility = if (showBattery) View.VISIBLE else View.GONE
+    }
+
+    private fun stopPages() {
+        pager?.unregisterOnPageChangeCallback(pageCallback)
+        pages.forEach {
+            it.pause()
+            it.detach()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Night Mode
+    // ------------------------------------------------------------------
+
+    private fun onNightModeChanged(on: Boolean) {
+        nightOn = on
+        applyNightMode(animate = true)
+    }
+
+    /**
+     * Brings the screen in line with [nightOn]: brightness, black
+     * backgrounds, and the red tint over everything on screen.
+     */
+    private fun applyNightMode(animate: Boolean) {
+        applyBrightness()
+        applyBackgroundColor()
+        pages.forEach { it.setNightMode(nightOn) }
+
+        tintAnimator?.cancel()
+        val target = if (nightOn) 1f else 0f
+        if (!animate || tintFraction == target) {
+            setTint(target)
+            return
+        }
+        tintAnimator = ValueAnimator.ofFloat(tintFraction, target).apply {
+            duration = TINT_ANIMATION_MS
+            addUpdateListener { setTint(it.animatedValue as Float) }
+            start()
+        }
+    }
+
+    /** Draws the whole view tree through the Night Mode colour matrix, or directly when [fraction] is 0. */
+    private fun setTint(fraction: Float) {
+        tintFraction = fraction
+        val root = root ?: return
+        if (fraction <= 0f) {
+            root.setLayerType(View.LAYER_TYPE_NONE, null)
+        } else {
+            tintPaint.colorFilter = ColorMatrixColorFilter(NightTint.matrix(fraction))
+            root.setLayerType(View.LAYER_TYPE_HARDWARE, tintPaint)
+        }
+    }
+
+    private fun applyBrightness() {
+        val lp = window?.attributes ?: return
+        lp.screenBrightness =
+            if (nightOn) NIGHT_BRIGHTNESS else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        window?.attributes = lp
+    }
+
+    // The warm dark grey would glow red under the Night Mode tint.
+    private fun applyBackgroundColor() {
+        val useOled = prefs.getBoolean(getString(R.string.pref_key_oled_mode), false)
+        val color = if (useOled || nightOn) Color.BLACK else getColor(R.color.bg_dark)
+        root?.setBackgroundColor(color)
+    }
+
+    // ------------------------------------------------------------------
+    // Battery
+    // ------------------------------------------------------------------
+
+    private fun registerBatteryReceiver() {
+        unregisterBatteryReceiver()
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        batteryReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
+                if (pct >= 0) {
+                    batteryStatus?.text = "$pct%"
+                }
+            }
+        }
+        registerReceiver(batteryReceiver, filter)
+    }
+
+    private fun unregisterBatteryReceiver() {
+        batteryReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+            batteryReceiver = null
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Display helpers
+    // ------------------------------------------------------------------
 
     /** Hide system bars for an immersive dream experience. */
     private fun applySystemUiFlags() {
@@ -191,371 +294,10 @@ class DockDreamService : DreamService() {
         }
     }
 
-    /** Inflates the correct layout based on physical rotation and sets up all views. */
-    private fun setupContentView(forceOrientation: Int? = null) {
-        val actualOrientation = forceOrientation ?: currentPhysicalOrientation()
-        val displayContext = if (resources.configuration.orientation != actualOrientation) {
-            val config = Configuration(resources.configuration).apply {
-                orientation = actualOrientation
-            }
-            createConfigurationContext(config)
-        } else {
-            this
-        }
-        displayResources = displayContext.resources
-        val view = LayoutInflater.from(displayContext).inflate(R.layout.dream_dock, null)
-        setContentView(view)
-
-        rootLayout = findViewById(R.id.dream_root)
-        slideshowFront = findViewById(R.id.slideshow_front)
-        slideshowBack = findViewById(R.id.slideshow_back)
-        scrimOverlay = findViewById(R.id.scrim_overlay)
-        widgetRail = findViewById(R.id.widget_rail)
-        clockContainer = findViewById(R.id.clock_container)
-        clockDisplay = findViewById(R.id.clock_display)
-        dateDisplay = findViewById(R.id.date_display)
-        batteryStatus = findViewById(R.id.battery_status)
-
-        slideshowManager = PhotoSlideshowManager.getInstance(this)
-        slideshowManager.init(slideshowFront, slideshowBack, scrimOverlay)
-
-        widgetHostManager = WidgetHostManager.getInstance(this)
-        widgetHostManager.init(widgetRail, actualOrientation == Configuration.ORIENTATION_LANDSCAPE)
-
-        applyBackgroundColor()
-        applyBrightnessOverride()
-    }
-
-    // ------------------------------------------------------------------
-    // Clock customization
-    // ------------------------------------------------------------------
-
-    private fun applyClockPosition() {
-        val position = prefs.getString(
-            getString(R.string.pref_key_clock_position), "left"
-        ) ?: "left"
-        val params = clockContainer.layoutParams as? ConstraintLayout.LayoutParams
-        when (position) {
-            "left" -> {
-                params?.horizontalBias = 0.15f
-                clockContainer.gravity = android.view.Gravity.START
-            }
-            "center" -> {
-                params?.horizontalBias = 0.5f
-                clockContainer.gravity = android.view.Gravity.CENTER_HORIZONTAL
-            }
-            "right" -> {
-                params?.horizontalBias = 0.85f
-                clockContainer.gravity = android.view.Gravity.END
-            }
-        }
-        if (params != null) clockContainer.layoutParams = params
-    }
-
-    private fun applyClockCustomization() {
-        val clockPercent = prefs.getInt(getString(R.string.pref_key_clock_font_size), 100)
-        val fontOption = prefs.getString(getString(R.string.pref_key_clock_font), "default") ?: "default"
-        val animEnabled = prefs.getBoolean(getString(R.string.pref_key_transition_animation), true)
-
-        val baseClockSize = displayResources.getDimension(R.dimen.clock_text_size)
-        clockDisplay.clockSize = baseClockSize * clockPercent / 100f
-
-        // Date size: responsive to orientation (dimens differ per layout) and
-        // scaled by the user's date-size preference.
-        val datePercent = prefs.getInt(getString(R.string.pref_key_date_font_size), 100)
-        val baseDatePx = displayResources.getDimension(R.dimen.date_text_size)
-        dateDisplay.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, baseDatePx * datePercent / 100f)
-
-        // Responsive: cap clockSize so it never overflows the clockContainer.
-        // Post a one-shot measurement after layout pass.
-        clockDisplay.post {
-            val availW = clockContainer.width -
-                clockContainer.paddingLeft - clockContainer.paddingRight
-            if (availW > 0) {
-                clockDisplay.clockSize = clockDisplay.clockSize.coerceAtMost(
-                    clockDisplay.computeFittingTextSize(availW)
-                )
-            }
-        }
-
-        clockDisplay.clockTypeface = when (fontOption) {
-            "serif" -> Typeface.SERIF
-            "monospace" -> Typeface.MONOSPACE
-            "sans-serif-light" -> Typeface.create("sans-serif-light", Typeface.NORMAL)
-            "sans-serif-thin" -> Typeface.create("sans-serif-thin", Typeface.NORMAL)
-            "custom" -> {
-                val fontFile = prefs.getString(getString(R.string.pref_key_clock_font_file), null)
-                if (fontFile != null) try { Typeface.createFromFile(fontFile) } catch (e: Exception) { Typeface.DEFAULT }
-                else Typeface.DEFAULT
-            }
-            else -> Typeface.DEFAULT
-        }
-        clockDisplay.animEnabled = animEnabled
-        clockDisplay.is24Hour = prefs.getBoolean(getString(R.string.pref_key_clock_24h), true)
-
-        // Dim bright styles (neon/gradient) and slow idle motion when the
-        // screen is darkened, so they cooperate with OLED / night-dim mode.
-        val oled = prefs.getBoolean(getString(R.string.pref_key_oled_mode), false)
-        clockDisplay.dimmed = oled || isNightDimActive()
-
-        // Selected visual style. Set after dimmed so the idle animation that
-        // (re)starts with the style already reflects the dimmed intensity.
-        val style = prefs.getString(getString(R.string.pref_key_clock_style), "default") ?: "default"
-        clockDisplay.clockStyle = when (style) {
-            "bubble" -> AnimatedClockView.ClockStyle.BUBBLE
-            "neon" -> AnimatedClockView.ClockStyle.NEON
-            "mono" -> AnimatedClockView.ClockStyle.MONO
-            "gradient" -> AnimatedClockView.ClockStyle.GRADIENT
-            "outline" -> AnimatedClockView.ClockStyle.OUTLINE
-            else -> AnimatedClockView.ClockStyle.DEFAULT
-        }
-
-        // Per-style color. Use the style-specific key; fall back to universal.
-        val styleColorKey = when (style) {
-            "bubble" -> getString(R.string.pref_key_clock_color_bubble)
-            "neon" -> getString(R.string.pref_key_clock_color_neon)
-            "gradient" -> getString(R.string.pref_key_clock_color_gradient)
-            "mono" -> getString(R.string.pref_key_clock_color_mono)
-            "outline" -> getString(R.string.pref_key_clock_color_outline)
-            else -> getString(R.string.pref_key_clock_color_normal)
-        }
-        val colorHex = prefs.getString(styleColorKey, null)
-            ?: prefs.getString(getString(R.string.pref_key_clock_color), "#c3c2b7")
-            ?: "#c3c2b7"
-        try {
-            clockDisplay.clockColor = Color.parseColor(colorHex)
-        } catch (e: Exception) {}
-
-        // Date and battery each have their own independent color, falling back
-        // to the clock's color (not the other way around) when unset.
-        val dateHex = prefs.getString(getString(R.string.pref_key_date_color), null) ?: colorHex
-        try { dateDisplay.setTextColor(Color.parseColor(dateHex)) } catch (e: Exception) {}
-
-        val batteryHex = prefs.getString(getString(R.string.pref_key_battery_color), null) ?: colorHex
-        try { batteryStatus.setTextColor(Color.parseColor(batteryHex)) } catch (e: Exception) {}
-
-        // Per-digit bubble colors — comma-separated hex, e.g. "#ff0000,#00ff00,..."
-        val digitColorsStr = prefs.getString(getString(R.string.pref_key_clock_color_bubble), null)
-        if (digitColorsStr != null) {
-            try {
-                val ints = digitColorsStr.split(",").map { Color.parseColor(it.trim()) }
-                clockDisplay.bubbleDigitColors = ints.toIntArray()
-            } catch (_: Exception) {
-                clockDisplay.bubbleDigitColors = null
-            }
-        } else {
-            clockDisplay.bubbleDigitColors = null
-        }
-
-        // Gradient style colors — comma-separated hex list of 2+ colors
-        val gradStr = prefs.getString(getString(R.string.pref_key_clock_color_gradient), null)
-        if (gradStr != null) {
-            try {
-                val parts = gradStr.split(",").map { Color.parseColor(it.trim()) }
-                clockDisplay.gradientColors = if (parts.size >= 2) parts.toIntArray() else null
-            } catch (_: Exception) {
-                clockDisplay.gradientColors = null
-            }
-        } else {
-            clockDisplay.gradientColors = null
-        }
-    }
-
-    /**
-     * Whether the user's night-dim window is currently active. Handles windows
-     * that wrap past midnight (e.g. 22:00 → 07:00). The night-dim toggle and
-     * start/end hour prefs are shared with SettingsActivity.
-     */
-    private fun isNightDimActive(): Boolean {
-        if (!prefs.getBoolean(getString(R.string.pref_key_night_dim), true)) return false
-        val start = prefs.getString(getString(R.string.pref_key_night_dim_start), "22")?.toIntOrNull() ?: 22
-        val end = prefs.getString(getString(R.string.pref_key_night_dim_end), "7")?.toIntOrNull() ?: 7
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        return if (start <= end) hour in start until end else (hour >= start || hour < end)
-    }
-
-    // ------------------------------------------------------------------
-    // Module state management
-    // ------------------------------------------------------------------
-
-    private fun loadModuleStates() {
-        val slideshowEnabled = prefs.getBoolean(
-            getString(R.string.pref_key_slideshow_enabled), true
-        )
-        val widgetsEnabled = prefs.getBoolean(
-            getString(R.string.pref_key_widgets_enabled), true
-        )
-        val showDate = prefs.getBoolean(
-            getString(R.string.pref_key_show_date), true
-        )
-        val batteryEnabled = prefs.getBoolean(
-            getString(R.string.pref_key_battery_enabled), true
-        )
-
-        // Date visibility
-        dateDisplay.visibility = if (showDate) View.VISIBLE else View.GONE
-
-        // Battery visibility
-        batteryStatus.visibility = if (batteryEnabled) View.VISIBLE else View.GONE
-        if (batteryEnabled) {
-            val batteryPct = prefs.getInt(getString(R.string.pref_key_battery_font_size), 100)
-            batteryStatus.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP,
-                12f * batteryPct / 100f)
-        }
-
-        // Slideshow
-        slideshowManager.setEnabled(slideshowEnabled)
-        if (slideshowEnabled) {
-            loadPersistedPhotoUris()
-        }
-
-        // Widgets
-        widgetHostManager.setEnabled(widgetsEnabled)
-    }
-
-    // ------------------------------------------------------------------
-    // Battery receiver
-    // ------------------------------------------------------------------
-
-    private fun registerBatteryReceiver() {
-        unregisterBatteryReceiver()
-        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        batteryReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
-                if (pct >= 0) {
-                    batteryStatus.text = "$pct%"
-                }
-            }
-        }
-        registerReceiver(batteryReceiver, filter)
-    }
-
-    private fun unregisterBatteryReceiver() {
-        batteryReceiver?.let {
-            try { unregisterReceiver(it) } catch (_: Exception) {}
-            batteryReceiver = null
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Shake / accelerometer sensor
-    // ------------------------------------------------------------------
-
-    private fun registerSensor() {
-        sensorManager = getSystemService(SENSOR_SERVICE) as? SensorManager
-        sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { accel ->
-            // UI delay: fast enough to catch a shake impulse, still light on power
-            // (the wobble animation itself is driven by the view, not the sensor).
-            sensorManager?.registerListener(shakeListener, accel, SensorManager.SENSOR_DELAY_UI)
-        }
-    }
-
-    private fun unregisterSensor() {
-        sensorManager?.also {
-            try { it.unregisterListener(shakeListener) } catch (_: Exception) {}
-            sensorManager = null
-        }
-    }
-
-    private fun startSlideshowIfEnabled() {
-        if (slideshowManager.isEnabled()) {
-            slideshowManager.start()
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Slideshow persistence
-    // ------------------------------------------------------------------
-
-    /**
-     * Load persisted photo URIs from SharedPreferences.
-     * Stored as pipe-separated URI strings.
-     */
-    private fun loadPersistedPhotoUris() {
-        val uriString = prefs.getString("slideshow_photo_uris", "") ?: ""
-        if (uriString.isNotEmpty()) {
-            val uris = uriString.split("|").map { Uri.parse(it) }
-            if (uris.isNotEmpty()) {
-                slideshowManager.setPhotoUris(uris)
-            }
-        }
-    }
-
-    /** Persist photo URIs (called from SettingsActivity after picker). */
-    internal fun persistPhotoUris(uris: List<Uri>) {
-        val uriString = uris.map { it.toString() }.joinToString("|")
-        prefs.edit().putString("slideshow_photo_uris", uriString).apply()
-        // Reload in slideshow manager
-        slideshowManager.setPhotoUris(uris)
-        if (slideshowManager.isEnabled()) {
-            slideshowManager.start()
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Display helpers
-    // ------------------------------------------------------------------
-
-    private fun applyBackgroundColor() {
-        val useOled = prefs.getBoolean(getString(R.string.pref_key_oled_mode), false)
-        val color = if (useOled) Color.BLACK else getColor(R.color.bg_dark)
-        rootLayout.setBackgroundColor(color)
-    }
-
-    private fun applyBrightnessOverride() {
-        val lp = window?.attributes ?: return
-        val eff = effectiveBrightness()
-        lp.screenBrightness =
-            if (eff in 0f..1f) eff else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-        window?.attributes = lp
-    }
-
-    /**
-     * Resolved screen brightness combining the manual override with night
-     * auto-dim. During the night window the screen is forced very dim (and
-     * never brighter than a manual override, if one is set). Returns -1 to mean
-     * "leave the system default".
-     */
-    private fun effectiveBrightness(): Float {
-        val override = prefs.getFloat(getString(R.string.pref_key_brightness), -1f)
-        val night = isNightDimActive()
-        val nightLevel = 0.06f
-        return when {
-            night && override in 0f..1f -> minOf(override, nightLevel)
-            night -> nightLevel
-            override in 0f..1f -> override
-            else -> -1f
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Night auto-dim scheduler
-    // ------------------------------------------------------------------
-
-    // The dream runs for hours, so the night window can begin or end mid-dream.
-    // Re-evaluate brightness + the clock's dimmed styling once a minute.
-    private val dimHandler = Handler(Looper.getMainLooper())
-    private val dimRunnable = object : Runnable {
-        override fun run() {
-            if (!::prefs.isInitialized) return
-            applyBrightnessOverride()
-            if (::clockDisplay.isInitialized) {
-                clockDisplay.dimmed =
-                    prefs.getBoolean(getString(R.string.pref_key_oled_mode), false) || isNightDimActive()
-            }
-            dimHandler.postDelayed(this, 60_000L)
-        }
-    }
-
-    private fun startDimScheduler() {
-        dimHandler.removeCallbacks(dimRunnable)
-        dimHandler.postDelayed(dimRunnable, 60_000L)
-    }
-
-    private fun stopDimScheduler() {
-        dimHandler.removeCallbacks(dimRunnable)
+    private companion object {
+        const val PAGE_WIDGETS = 0
+        const val PAGE_CLOCK = 2
+        const val NIGHT_BRIGHTNESS = 0.01f
+        const val TINT_ANIMATION_MS = 1_000L
     }
 }
