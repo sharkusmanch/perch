@@ -20,6 +20,12 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
     private val bounds = Rect()
     private val hsv = FloatArray(3)
 
+    /**
+     * Optional limit on the drift, as a fraction of the numeral size. Small
+     * renderings (the settings preview) set it so the numerals do not overlap.
+     */
+    var maxDriftFraction: Float? = null
+
     // The phone charges all night: redraw far less often once the room is dark.
     override fun nextDelayMs(nowMs: Long): Long = if (nightMode) NIGHT_FRAME_MS else FRAME_MS
 
@@ -42,8 +48,8 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
 
         Color.colorToHSV(accentColor, hsv)
         val baseHue = hsv[0]
-        // Capped by the numeral size so small renderings (the settings preview) do not overlap.
-        val amplitude = minOf(DRIFT_DP * density, paint.textSize * MAX_DRIFT_FRACTION)
+        val fullDrift = DRIFT_DP * density
+        val amplitude = maxDriftFraction?.let { minOf(fullDrift, paint.textSize * it) } ?: fullDrift
         // Double: a Float loses sub-second precision after days of uptime.
         val t = SystemClock.uptimeMillis() / 1000.0
 
@@ -67,7 +73,6 @@ class FloatFaceView(context: Context) : BaseFaceView(context) {
         const val MAX_WIDTH_FRACTION = 0.82f
         const val MAX_HEIGHT_FRACTION = 0.6f
         const val DRIFT_DP = 6f
-        const val MAX_DRIFT_FRACTION = 0.03f
         const val HUE_STEP = 28f
         const val SATURATION = 0.55f
         const val FRAME_MS = 66L

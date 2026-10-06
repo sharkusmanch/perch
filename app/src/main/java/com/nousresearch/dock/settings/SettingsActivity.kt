@@ -13,9 +13,11 @@ import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +57,13 @@ class SettingsActivity : AppCompatActivity() {
         DynamicColors.applyToActivityIfAvailable(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // Draw the background beside a camera cutout in landscape instead of a black bar.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
         setContentView(R.layout.activity_settings)
 
         if (savedInstanceState == null) {
@@ -113,6 +122,35 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
+        // A widget bind can be waiting on the system permission dialog when
+        // the screen rotates; keep track of it across the recreation.
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            savedInstanceState?.let {
+                pendingWidgetSlot = it.getInt(STATE_PENDING_SLOT, -1)
+                pendingWidgetId = it.getInt(STATE_PENDING_ID, -1)
+                pendingWidgetProvider = it.getString(STATE_PENDING_PROVIDER)
+                    ?.let(ComponentName::unflattenFromString)
+            }
+        }
+
+        override fun onSaveInstanceState(outState: Bundle) {
+            super.onSaveInstanceState(outState)
+            outState.putInt(STATE_PENDING_SLOT, pendingWidgetSlot)
+            outState.putInt(STATE_PENDING_ID, pendingWidgetId)
+            outState.putString(STATE_PENDING_PROVIDER, pendingWidgetProvider?.flattenToString())
+        }
+
+        override fun onStart() {
+            super.onStart()
+            findPreference<FacePreviewPreference>("face_preview")?.setActive(true)
+        }
+
+        override fun onStop() {
+            findPreference<FacePreviewPreference>("face_preview")?.setActive(false)
+            super.onStop()
+        }
+
         override fun onCreateAdapter(preferenceScreen: PreferenceScreen): RecyclerView.Adapter<*> =
             CardPreferenceAdapter(preferenceScreen)
 
@@ -128,7 +166,8 @@ class SettingsActivity : AppCompatActivity() {
                 val bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
                 )
-                list.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom + bottomGap)
+                // The CoordinatorLayout already insets this container at the sides.
+                list.updatePadding(bottom = bars.bottom + bottomGap)
                 insets
             }
         }
@@ -477,7 +516,10 @@ class SettingsActivity : AppCompatActivity() {
                     row.icon = loadProviderIcon(ctx, info)
                         ?: AppCompatResources.getDrawable(ctx, R.drawable.ic_widgets)
                 } else {
-                    row.summary = getString(R.string.widget_pick_for_slot)
+                    // A saved widget whose app is gone can still be changed or removed.
+                    row.summary = getString(
+                        if (provider != null) R.string.widget_unavailable else R.string.widget_pick_for_slot
+                    )
                     row.icon = AppCompatResources.getDrawable(ctx, R.drawable.ic_widgets)
                 }
             }
@@ -527,6 +569,12 @@ class SettingsActivity : AppCompatActivity() {
             val uriString = prefs.getString(DreamPrefs.KEY_PHOTO_URIS, "") ?: ""
             val count = if (uriString.isNotEmpty()) uriString.split("|").size else 0
             updatePickPhotosSummary(count)
+        }
+
+        private companion object {
+            const val STATE_PENDING_SLOT = "pending_widget_slot"
+            const val STATE_PENDING_ID = "pending_widget_id"
+            const val STATE_PENDING_PROVIDER = "pending_widget_provider"
         }
     }
 }

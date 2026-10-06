@@ -24,8 +24,21 @@ class FacePreviewPreference(context: Context, attrs: AttributeSet?) : Preference
         layoutResource = R.layout.preference_face_preview
     }
 
+    private var faces: List<BaseFaceView> = emptyList()
+    private var active = false
+
     /** Redraw with the current settings. */
     fun refresh() = notifyChanged()
+
+    /**
+     * Run the previews only while the settings screen is on show. Leaving
+     * the screen does not detach the views, so they would otherwise keep
+     * redrawing in the background.
+     */
+    fun setActive(active: Boolean) {
+        this.active = active
+        faces.forEach { if (active && it.isAttachedToWindow) it.resume() else it.pause() }
+    }
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
@@ -45,16 +58,20 @@ class FacePreviewPreference(context: Context, attrs: AttributeSet?) : Preference
     private fun buildTiles(row: LinearLayout) {
         val ctx = row.context
         val dp = ctx.resources.displayMetrics.density
-        val faces = listOf(
+        val tiles = listOf(
             Triple(DigitalFaceView(ctx), R.string.pref_key_face_color_digital, R.string.face_digital),
             Triple(AnalogFaceView(ctx), R.string.pref_key_face_color_analog, R.string.face_analog),
-            Triple(FloatFaceView(ctx), R.string.pref_key_face_color_float, R.string.face_float)
+            Triple(
+                FloatFaceView(ctx).apply { maxDriftFraction = PREVIEW_DRIFT_FRACTION },
+                R.string.pref_key_face_color_float, R.string.face_float
+            )
         )
-        for ((face, keyRes, labelRes) in faces) {
+        faces = tiles.map { it.first }
+        for ((face, keyRes, labelRes) in tiles) {
             face.tag = keyRes
             // Faces stop themselves when detached; start them again whenever shown.
             face.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) = face.resume()
+                override fun onViewAttachedToWindow(v: View) { if (active) face.resume() }
                 override fun onViewDetachedFromWindow(v: View) = face.pause()
             })
 
@@ -94,6 +111,7 @@ class FacePreviewPreference(context: Context, attrs: AttributeSet?) : Preference
 
     private companion object {
         const val TILE_HEIGHT_DP = 64
+        const val PREVIEW_DRIFT_FRACTION = 0.03f
         val COLORS = listOf(
             R.string.pref_key_face_color_digital to DreamPrefs.DEFAULT_COLOR_DIGITAL,
             R.string.pref_key_face_color_analog to DreamPrefs.DEFAULT_COLOR_ANALOG,

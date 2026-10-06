@@ -22,7 +22,8 @@ class ColorPreference(context: Context, attrs: AttributeSet?) : Preference(conte
         get() = try {
             Color.parseColor(getPersistedString(defaultHex))
         } catch (_: IllegalArgumentException) {
-            Color.WHITE
+            // Same fallback the screensaver uses for an unreadable value.
+            Color.parseColor(defaultHex)
         }
 
     override fun onGetDefaultValue(a: TypedArray, index: Int): Any? = a.getString(index)

@@ -1,8 +1,6 @@
 package com.nousresearch.dock.settings
 
 import android.annotation.SuppressLint
-import android.os.Handler
-import android.os.Looper
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroup
 import androidx.preference.PreferenceGroupAdapter
@@ -19,24 +17,8 @@ import com.nousresearch.dock.R
 @SuppressLint("RestrictedApi")
 class CardPreferenceAdapter(group: PreferenceGroup) : PreferenceGroupAdapter(group) {
 
-    private val handler = Handler(Looper.getMainLooper())
-    private val rebindAll = Runnable { notifyItemRangeChanged(0, itemCount) }
-
-    init {
-        // Showing or hiding a row changes which neighbours are first or last
-        // in their card, so every row's shape has to be re-decided.
-        registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) = scheduleRebind()
-            override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) = scheduleRebind()
-            override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) = scheduleRebind()
-        })
-    }
-
-    private fun scheduleRebind() {
-        handler.removeCallbacks(rebindAll)
-        handler.post(rebindAll)
-    }
-
+    // Showing or hiding a row makes the framework rebind every row, so each
+    // row's shape is re-decided here whenever its neighbours change.
     override fun onBindViewHolder(holder: PreferenceViewHolder, position: Int) {
         super.onBindViewHolder(holder, position)
         val view = holder.itemView

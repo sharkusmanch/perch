@@ -123,7 +123,8 @@ object ColorPickerDialog {
 
     private fun hex(color: Int): String = String.format("%06X", color and 0xFFFFFF)
 
+    private val HEX = Regex("[0-9A-Fa-f]{6}")
+
     private fun parse(text: String): Int? =
-        if (text.length == 6) try { Color.parseColor("#$text") } catch (_: IllegalArgumentException) { null }
-        else null
+        if (HEX.matches(text)) Color.parseColor("#$text") else null
 }
